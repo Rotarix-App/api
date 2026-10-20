@@ -38,7 +38,6 @@ const options = {
                         phone: { type: 'string', nullable: true, example: '34998124471' },
                         cnhNumber: { type: 'string', nullable: true, example: null },
                         cnhCategory: { type: 'string', enum: ['B', 'C', 'D', 'E'], nullable: true, example: null },
-                        fleetId: { type: 'integer', nullable: true, example: null },
                         status: { type: 'string', enum: ['active', 'inactive'] },
                         createdAt: { type: 'string', format: 'date-time' },
                         updatedAt: { type: 'string', format: 'date-time' },

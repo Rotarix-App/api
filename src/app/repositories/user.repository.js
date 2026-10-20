@@ -64,8 +64,7 @@ class UserRepository {
             passwordHash: crypto.randomBytes(32).toString('hex'),
             phone: null,
             cnhNumber: null,
-            cnhCategory: null,
-            fleetId: null
+            cnhCategory: null
         }, { where: { id }, ...options })
             .then(() => User.destroy({ where: { id }, ...options }))
             .catch(utils.logError)

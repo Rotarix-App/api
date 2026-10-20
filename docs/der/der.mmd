@@ -2,7 +2,6 @@
 title: Rotarix — Entity-Relationship Diagram
 ---
 erDiagram
-    fleets |o--o{ users : "fleet_id (drivers)"
     fleets |o--o{ vehicles : "fleet_id"
     users ||--o{ vehicle_assignments : "driver_id"
     vehicles ||--o{ vehicle_assignments : "vehicle_id"
@@ -49,7 +48,6 @@ erDiagram
         varchar(20) phone "nullable"
         varchar(11) cnh_number "nullable, drivers"
         enum cnh_category "B | C | D | E, nullable"
-        int fleet_id FK "nullable, drivers"
         enum status "active | inactive"
         datetime created_at
         datetime updated_at

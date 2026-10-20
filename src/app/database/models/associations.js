@@ -10,9 +10,6 @@ const Refueling = require('./refueling')
 const Maintenance = require('./maintenance')
 const ServiceReminder = require('./service-reminder')
 
-Fleet.hasMany(User, { foreignKey: 'fleetId', as: 'drivers' })
-User.belongsTo(Fleet, { foreignKey: 'fleetId', as: 'fleet' })
-
 Fleet.hasMany(Vehicle, { foreignKey: 'fleetId', as: 'vehicles' })
 Vehicle.belongsTo(Fleet, { foreignKey: 'fleetId', as: 'fleet' })
 

@@ -35,10 +35,6 @@ const User = connection.define('User', {
         type: DataTypes.ENUM('B', 'C', 'D', 'E'),
         allowNull: true
     },
-    fleetId: {
-        type: DataTypes.INTEGER,
-        allowNull: true
-    },
     status: {
         type: DataTypes.ENUM('active', 'inactive'),
         allowNull: false,

@@ -26,15 +26,12 @@ CREATE TABLE `users` (
 	`phone` VARCHAR(20) NULL DEFAULT NULL,
 	`cnh_number` VARCHAR(11) NULL DEFAULT NULL,
 	`cnh_category` ENUM('B','C','D','E') NULL DEFAULT NULL,
-	`fleet_id` INT(11) NULL DEFAULT NULL,
 	`status` ENUM('active','inactive') NOT NULL DEFAULT 'active',
 	`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	`deleted_at` DATETIME NULL DEFAULT NULL,
 	PRIMARY KEY (`id`) USING BTREE,
-	UNIQUE INDEX `uq_users_email` (`email`),
-	INDEX `fk_users_fleet` (`fleet_id`),
-	CONSTRAINT `fk_users_fleet` FOREIGN KEY (`fleet_id`) REFERENCES `fleets` (`id`) ON DELETE SET NULL
+	UNIQUE INDEX `uq_users_email` (`email`)
 )
 COLLATE='utf8mb4_general_ci'
 ENGINE=InnoDB
