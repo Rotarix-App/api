@@ -13,7 +13,7 @@ module.exports = async (req, res, next) => {
         return res.status(401).json({
             error: true,
             message: "Não autorizado.",
-            error_id: "unauthorized"
+            id: "unauthorized"
         })
     }
 

@@ -58,4 +58,13 @@ const User = connection.define('User', {
     }
 })
 
+User.prototype.toJSON = function () {
+    const values = { ...this.get() }
+
+    delete values.passwordHash
+    delete values.deletedAt
+
+    return values
+}
+
 module.exports = User
