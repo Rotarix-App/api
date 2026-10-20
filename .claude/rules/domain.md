@@ -63,7 +63,11 @@ Which fleets a manager is responsible for, and whether companies are isolated fr
   - Created by a manager (name, email, phone, CNH number, CNH category B/C/D/E, temporary password) or through self sign-up.
   - Deactivating removes their assignments and blocks app access; a trip in progress continues (who finishes it: P12).
   - Deleting their data requires typing `EXCLUIR` and anonymizes their history.
-- **Assignment** (RF07, D13). A driver has one fleet at a time and one or more of its vehicles; a vehicle can have several drivers. Inactive fleets can't be chosen. Saving requires at least one vehicle.
+- **Assignment** (RF07, D13).
+  - A driver works in one fleet at a time, with one or more of its vehicles; a vehicle can have several drivers.
+  - The driver's fleet isn't stored. It's the fleet of their assigned vehicles, so all of those vehicles must belong to the same active fleet.
+  - Inactive fleets can't be chosen, and saving requires at least one vehicle.
+  - Anything that takes a vehicle out of a fleet removes its assignments.
 - **Trip** (D20).
   - **Start:** an assigned vehicle not on a trip, origin, destination, initial odometer and a required photo. The start time is automatic.
   - **In progress:** records link to the trip automatically.
@@ -101,7 +105,7 @@ Summary only. The physical schema (tables, columns, constraints) is in `.claude/
 | User | role, full name, email (unique, used as login), password (hashed), phone, status; drivers also have CNH number and category (B–E) |
 | Fleet | name, base or region, description, status; groups vehicles |
 | Vehicle | plate (unique), brand, model, year, current odometer with the time and photo of the last reading, status, fleet |
-| Assignment | driver → one fleet; driver ↔ vehicles of that fleet (N:N) |
+| Assignment | driver ↔ vehicles (N:N), all in one fleet; the driver's fleet is derived from these vehicles |
 | Trip | driver, vehicle, origin, destination, start and end times, start and end odometer with photos, notes, status |
 | Expense | category, amount, description, receipt photo, timestamp; linked to a trip or a vehicle |
 | Refueling | liters, price per liter, total, odometer with photo, gas station, invoice photo; counts as a Combustível expense |

@@ -34,7 +34,7 @@ The physical schema, derived from what the prototype shows and collects (`protot
 | description | VARCHAR(255) | ✓ | Optional |
 | status | ENUM active, inactive | — | Default active |
 
-Fleets are hard-deleted. `vehicles.fleet_id` and `users.fleet_id` become NULL. The service also deletes the fleet's assignments (D12).
+Fleets are hard-deleted. `vehicles.fleet_id` becomes NULL, and the service deletes the assignments to the fleet's vehicles (D12).
 
 ### users (S02–S03, S11–S13, S19–S20, S36–S37)
 
@@ -48,7 +48,6 @@ Fleets are hard-deleted. `vehicles.fleet_id` and `users.fleet_id` become NULL. T
 | phone | VARCHAR(20) | ✓ | Required on sign-up; NULL after anonymization |
 | cnh_number | VARCHAR(11) | ✓ | Drivers only |
 | cnh_category | ENUM B, C, D, E | ✓ | Drivers only |
-| fleet_id | INT | ✓ | FK fleets. A driver's single fleet (D13); SET NULL when the fleet is deleted |
 | status | ENUM active, inactive | — | Inactive = deactivated driver (D24) |
 | deleted_at | DATETIME | ✓ | Set when an account or a driver's data is deleted |
 
@@ -56,7 +55,7 @@ Fleets are hard-deleted. `vehicles.fleet_id` and `users.fleet_id` become NULL. T
 - Set `deleted_at`.
 - Replace `name` with a placeholder and `email` with a unique placeholder (for example `removed-<id>@rotarix.invalid`).
 - Replace `password_hash` with a random hash.
-- Clear `phone`, `cnh_number`, `cnh_category` and `fleet_id`, and delete the user's assignments.
+- Clear `phone`, `cnh_number` and `cnh_category`, and delete the user's assignments.
 
 Trips and records keep pointing at the row. Paranoid queries hide it, so history shows no identification.
 
@@ -86,7 +85,12 @@ Free, on a trip and unavailable (*Livre*, *Em viagem*, *Indisponível*) aren't s
 | driver_id | INT | — | FK users, CASCADE. Unique together with vehicle_id |
 | vehicle_id | INT | — | FK vehicles, CASCADE |
 
-The service checks that the vehicle belongs to the driver's fleet (D13) and keeps at least one vehicle on save (RF07).
+**A driver's fleet is derived, not stored.** It's the fleet of the vehicles assigned to them (`vehicle_assignments → vehicles.fleet_id`), and there's no `fleet_id` on `users`; the user decided this on 2026-10-20 to avoid keeping the same fact in two places. The service enforces D13 and RF07 when it saves assignments:
+- every checked vehicle belongs to the same active fleet;
+- at least one vehicle is checked;
+- changing the driver's fleet replaces all of their assignments.
+
+Anything that takes a vehicle out of a fleet (deleting the fleet, M03; moving the vehicle with S09; deactivating the driver, M08) removes the affected assignments. Screens S06, S11 and S13 get the driver's fleet with a join through `vehicles`.
 
 ### photos (S25–S26, S28, S32–S35)
 
@@ -197,9 +201,8 @@ The prototype shows these alerts but has no screen to configure them.
 
 | From | To | Cardinality | Column |
 |---|---|---|---|
-| fleets | users (drivers) | 0..1 – N | users.fleet_id |
 | fleets | vehicles | 0..1 – N | vehicles.fleet_id |
-| users (drivers) | vehicles | N – M | vehicle_assignments |
+| users (drivers) | vehicles | N – M | vehicle_assignments (the driver's fleet is derived from it) |
 | users | photos | 1 – N | photos.uploaded_by |
 | vehicles | odometer_readings | 1 – N | odometer_readings.vehicle_id |
 | users | odometer_readings | 1 – N | odometer_readings.recorded_by |
