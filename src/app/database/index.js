@@ -7,9 +7,9 @@ const connection = new Sequelize(process.env.MYSQL_DATABASE, process.env.MYSQL_U
     logging: false
 })
 
-connection.authenticate().catch(async err => {
+connection.ready = connection.authenticate().catch(async err => {
     console.log(`[i]`.red + ` ${err}`)
-    return process.exit()
+    return process.exit(1)
 })
 
 module.exports = connection

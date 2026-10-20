@@ -4,7 +4,10 @@ class CustomSequencer extends Sequencer {
   sort(tests) {
     // Ordem explícita de execução dos testes. Arquivos não listados
     // rodam depois, em ordem alfabética.
-    const order = [];
+    const order = [
+      "auth.test.js",
+      "users.test.js"
+    ];
 
     return [...tests].sort((a, b) => {
       const ia = order.findIndex(o => a.path.endsWith(o));
