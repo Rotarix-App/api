@@ -4,7 +4,7 @@ These rules describe the code as it is today and the conventions for new code. W
 
 ## Stack
 
-Node.js (CommonJS) · Express 5 · Sequelize 6 + mysql2 (MySQL 8) · Zod 4 · jsonwebtoken + bcryptjs (installed, not used yet) · swagger-jsdoc + swagger-ui-express · Socket.IO 4 · Jest 30 + Supertest · dotenv · colors.
+Node.js (CommonJS) · Express 5 · Sequelize 6 + mysql2 (MySQL 8) · Zod 4 · jsonwebtoken + bcryptjs (installed, not used yet) · swagger-jsdoc + swagger-ui-express · Jest 30 + Supertest · dotenv · colors.
 
 ## Layout
 
@@ -14,14 +14,13 @@ src/
 ├── prototypes/console.js        # patches console.log with a pt-BR timestamp prefix
 ├── app/
 │   ├── index.js                 # Express app: cors, json/urlencoded, static, logger, Swagger, routes;
-│   │                            # starts HTTP + Socket.IO unless NODE_ENV=test
+│   │                            # starts the HTTP server unless NODE_ENV=test
 │   ├── config/swagger.js        # OpenAPI 3 at /api-docs, bearerAuth scheme, scans src/app/routes/*.js
 │   ├── handlers/routes.handler.js  # mounts every src/app/routes/*.js at "/"
 │   ├── routes/ controllers/ services/ repositories/   # empty (.gitkeep)
 │   ├── database/index.js        # Sequelize connection (exported first), then loads models/associations.js
 │   ├── database/models/         # Sequelize models + associations.js
 │   ├── middlewares/             # logger, private.auth (localhost only), schema (Zod)
-│   ├── socket/socketio.js       # Socket.IO wrapper; rooms "account:<id>"
 │   └── utils/index.js           # singleton Utils (empty)
 └── tests/                       # see testing rule
 data/db.sql                      # schema script (destructive: drops the database first)
@@ -78,4 +77,4 @@ No linter or formatter is configured, so match the file you are editing:
 
 ## Logging
 
-`console.log` is patched to prefix a pt-BR timestamp. Existing messages are in Portuguese and use colored tags: `[i]`.cyan for info, `[!]`.green for success, red for failures, `[WSS]` for socket events. The request logger is off in tests.
+`console.log` is patched to prefix a pt-BR timestamp. Existing messages are in Portuguese and use colored tags: `[i]`.cyan for info, `[!]`.green for success, red for failures. The request logger is off in tests.

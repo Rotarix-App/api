@@ -13,7 +13,7 @@ paths:
 - The stack is Jest 30 with Supertest. `npm test` runs `jest --runInBand`.
 - `testMatch` is `src/tests/**/*.test.js`. There are no test files yet.
 - `setupFilesAfterEnv` runs `src/tests/setup/global.js`, which requires `src/index.js` and exposes the Express app as `global.app`. It does **not** create the database or tables.
-- Jest sets `NODE_ENV=test`, so `src/index.js` loads `.env.test` (database `rotarix_test`), the HTTP server and Socket.IO don't start, and the request logger is off. Importing `src/index.js` also calls `console.clear()`.
+- Jest sets `NODE_ENV=test`, so `src/index.js` loads `.env.test` (database `rotarix_test`), the HTTP server doesn't start, and the request logger is off. Importing `src/index.js` also calls `console.clear()`.
 - The custom sequencer `src/tests/sequencer.js` runs the files in its `order` array first, in that order, and the rest alphabetically. When you add a domain, add its test file to `order` in dependency order (accounts before fleets before vehicles, for example).
 - CI (`.github/workflows/test.yml`) starts a MySQL 8 service, runs `data/db.sql`, then runs `npm test` with environment variables pointing at database `rotarix`. Those variables override `.env.test`, so CI and local runs use different databases.
 - Locally, nothing creates `rotarix_test` or its schema. Before running integration tests, confirm with the user which database they'll hit. Never point tests at a database that holds real data.

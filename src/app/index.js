@@ -19,11 +19,8 @@ require('./handlers/routes.handler.js')(app)
 
 if (process.env.NODE_ENV !== 'test') {
     const http = require('http')
-    const Socket = require('../app/socket/socketio.js')
 
     const server = http.createServer(app)
-    const socket = new Socket(server)
-    const io = socket.getIO()
 
     function StartWebService() {
         return new Promise((resolve, reject) => {

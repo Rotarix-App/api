@@ -12,7 +12,7 @@ Back end (Node.js · Express 5 · Sequelize/MySQL) for **Rotarix**, a mobile fle
 |---|---|---|
 | `.claude/rules/architecture.md` | Stack, layers, response envelope, naming, code style, config | Always |
 | `.claude/rules/domain.md` | Scope, roles, business rules, lifecycles, statuses, entities, pt-BR → English glossary | Always |
-| `.claude/rules/http-layer.md` | Routes, controllers, middlewares, Swagger, Socket.IO | When touching those files |
+| `.claude/rules/http-layer.md` | Routes, controllers, middlewares, Swagger | When touching those files |
 | `.claude/rules/data-layer.md` | Services, repositories, models, SQL schema | When touching those files or `data/` |
 | `.claude/rules/testing.md` | Jest/Supertest setup and conventions | When touching `src/tests/`, Jest or CI config |
 | `.claude/docs/prototype.md` | Functional spec of every prototype screen (S01–S37) and modal (M01–M24), with API implications | On demand |

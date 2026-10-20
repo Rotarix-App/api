@@ -6,7 +6,6 @@ paths:
   - "src/app/middlewares/**"
   - "src/app/handlers/**"
   - "src/app/config/**"
-  - "src/app/socket/**"
 ---
 
 # HTTP layer: routes, controllers, middlewares
@@ -45,8 +44,6 @@ const SchemaParserMiddleware = require('../middlewares/schema.middleware')
 
 Served at `/api-docs` (OpenAPI 3.0) with a `bearerAuth` JWT scheme. Servers are production `https://rotarix.xlucazzz.dev` and `http://localhost:3000`. The production URL is only configuration; no deployment has been verified.
 
-## Socket.IO
+## Real-time
 
-- Starts only outside tests and shares the HTTP server. CORS allows any origin.
-- A client emits `join` with an account id and joins room `account:<id>`. Nothing checks the id, so authenticate the socket before sending account data to rooms.
-- `app/index.js` creates the `io` instance but doesn't export it, so services can't emit events yet.
+There's no real-time channel. Socket.IO was removed on 2026-10-20 at the user's request. Don't add WebSockets, Socket.IO or similar without asking.

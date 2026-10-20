@@ -10,6 +10,7 @@ Started 2026-10-18. Every entry here is either stated in the official sources, c
 | — | 2026-10-18 | Inspect the code without changing it. Implement features only after a later approval. |
 | — | 2026-10-18 | Ask for approval before major architectural decisions and destructive operations. |
 | — | 2026-10-20 | Consolidate the agent instructions, rules, skills and memory under `.claude/`, written in English. |
+| — | 2026-10-20 | Remove Socket.IO from the project. The API has no real-time channel; don't add one without asking. |
 | **D09** | 2026-10-20 | **The Figma prototype "Rotarix — Protótipo Mobile" (v1.0, 2026-09-26) is the source of truth for functionality**: screens, flows, fields and behavior. Where the official documents diverge, follow the prototype. The official documents still govern non-functional requirements and any rule the prototype doesn't contradict. See [`prototype.md`](prototype.md). |
 
 ## From the official sources
@@ -51,7 +52,7 @@ Screen references (Sxx and Mxx) are explained in [`prototype.md`](prototype.md).
 
 ## Technical evidence, not decisions
 
-The repository already uses Node.js/CommonJS, Express 5, Sequelize, Zod, Socket.IO, JWT/bcryptjs and Jest/Supertest, with the layered architecture described in `.claude/rules/architecture.md`. These came from the initial scaffolding. They don't prove that any feature exists. See [`progress.md`](progress.md).
+The repository already uses Node.js/CommonJS, Express 5, Sequelize, Zod, JWT/bcryptjs and Jest/Supertest, with the layered architecture described in `.claude/rules/architecture.md`. These came from the initial scaffolding. They don't prove that any feature exists. See [`progress.md`](progress.md).
 
 ## Not approved yet
 
