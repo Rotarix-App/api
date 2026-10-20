@@ -1,7 +1,5 @@
-# Rotarix — entrada para agentes
+# Rotarix API: agent entry point
 
-Antes de trabalhar, leia [ai/AGENTS.md](ai/AGENTS.md),
-[CONTEXTO_GERAL.md](ai/docs/CONTEXTO_GERAL.md) e [INDICE.md](ai/docs/INDICE.md).
-Consulte os documentos originais relevantes indicados no índice e o histórico de decisões e progresso.
-Esses arquivos permitem recuperar o contexto sem depender da conversa anterior.
-Não implemente funcionalidades até a aprovação do usuário para encerrar a inicialização.
+All agent instructions, rules, skills and project memory live in [`.claude/`](.claude/). Start with [`.claude/CLAUDE.md`](.claude/CLAUDE.md) and follow its map.
+
+Claude Code loads `.claude/CLAUDE.md` and `.claude/rules/` automatically. Other agents should read `.claude/CLAUDE.md`, `.claude/rules/architecture.md` and `.claude/rules/domain.md` before starting work.
