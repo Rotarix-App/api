@@ -25,14 +25,14 @@ For each endpoint:
 
 ```
 METHOD /path
-- Auth: AuthMiddleware (+ role or assignment check) | privateAuthMiddleware | none
+- Auth: AuthMiddleware (+ roleMiddleware('manager' | 'driver') and assignment check) | privateAuthMiddleware | none
 - Purpose: what it does, and which screen or action uses it
 ```
 
 Then the request body and query (`field: type, rules`), the success response in the standard envelope with its status code, and every error with status and `id`.
 
 ### 3. Validation (Zod)
-Every field with its type, constraints (min, max, regex, enum) and the pt-BR error message. Reuse the prototype's wording where it exists (for example, "Esta placa já está cadastrada em outro veículo.").
+Every field with its type, constraints (min, max, regex, enum) and the pt-BR error message. Reuse the shared fields in `src/app/utils/schemas.js` and the prototype's wording where it exists (for example, "Esta placa já está cadastrada em outro veículo.").
 
 ### 4. Data model
 Tables and columns (types, constraints, defaults), relations and indexes, following `.claude/rules/data-layer.md`. Show the `data/db.sql` addition.

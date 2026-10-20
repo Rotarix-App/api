@@ -11,6 +11,8 @@ Started 2026-10-18. Every entry here is either stated in the official sources, c
 | — | 2026-10-18 | Ask for approval before major architectural decisions and destructive operations. |
 | — | 2026-10-20 | Consolidate the agent instructions, rules, skills and memory under `.claude/`, written in English. |
 | — | 2026-10-20 | Remove Socket.IO from the project. The API has no real-time channel; don't add one without asking. |
+| — | 2026-10-20 | Build the auth and users endpoints and repositories using `economix-api` (the user's earlier API) as the architectural reference, and update the skills to match. |
+| — | 2026-10-20 | Integration tests may recreate `rotarix_test` on the user's local MySQL. |
 | **D09** | 2026-10-20 | **The Figma prototype "Rotarix — Protótipo Mobile" (v1.0, 2026-09-26) is the source of truth for functionality**: screens, flows, fields and behavior. Where the official documents diverge, follow the prototype. The official documents still govern non-functional requirements and any rule the prototype doesn't contradict. See [`prototype.md`](prototype.md). |
 
 ## From the official sources
@@ -52,7 +54,7 @@ Screen references (Sxx and Mxx) are explained in [`prototype.md`](prototype.md).
 
 ## Technical evidence, not decisions
 
-The repository already uses Node.js/CommonJS, Express 5, Sequelize, Zod, JWT/bcryptjs and Jest/Supertest, with the layered architecture described in `.claude/rules/architecture.md`. These came from the initial scaffolding. They don't prove that any feature exists. See [`progress.md`](progress.md).
+The repository uses Node.js/CommonJS, Express 5, Sequelize, Zod, JWT/bcryptjs and Jest/Supertest, with the layered architecture described in `.claude/rules/architecture.md`. These came from the initial scaffolding. Only the auth and users module is implemented. See [`progress.md`](progress.md).
 
 ## Not approved yet
 
@@ -65,7 +67,17 @@ The repository already uses Node.js/CommonJS, Express 5, Sequelize, Zod, JWT/bcr
   - Sequelize `DATETIME` timestamps instead of the BIGINT template;
   - camelCase attributes mapped to snake_case columns;
   - kebab-case for multi-word file names.
-- Convention still to settle with the first domain: how service errors map to HTTP status.
+- **Choices made while building auth and users** (applied; review them):
+  - Error objects carry `httpStatus` (`utils.error`), and controllers send them with `utils.sendError`.
+  - Routes: `POST /register` and `POST /login` (both return `{ token, user }`); `GET`, `PUT` and `DELETE /users/@me`; `PUT /users/@me/password`.
+  - JWT `{ sub, role }` expiring in 7 days; logout is client-side; no token revocation.
+  - Password policy: 8–72 characters with upper case, lower case and a digit (from economix-api).
+  - Phone: digits only, 10–11 with the area code; the app strips the mask.
+  - Full name: at least two words.
+  - Login returns one `invalid_credentials` error for an unknown email and for a wrong password.
+  - Managers' CNH fields are ignored. Drivers must send their CNH when they edit their profile (`cnh_required`).
+  - Changing the password requires the current one and a confirmation (RF03). The screen isn't designed yet (P20).
+  - Deleting an account is blocked with `trip_in_progress` while the driver has a trip in progress (P22).
 
 ## Recording a new decision
 

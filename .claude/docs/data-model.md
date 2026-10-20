@@ -60,6 +60,8 @@ Fleets are hard-deleted. `vehicles.fleet_id` and `users.fleet_id` become NULL. T
 
 Trips and records keep pointing at the row. Paranoid queries hide it, so history shows no identification.
 
+This is implemented in `UserRepository.anonymize`, which `UserService.deleteAccount` runs in a transaction together with removing the assignments. The email placeholder frees the original email for a new sign-up. `User.prototype.toJSON` hides `passwordHash` and `deletedAt` in every response.
+
 ### vehicles (S08–S10, S23–S24)
 
 | Column | Type | Null | Notes |

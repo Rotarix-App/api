@@ -20,14 +20,15 @@ Target: $ARGUMENTS. If empty, review the commits on this branch that aren't in `
 
 ### Architecture
 - [ ] Layers are separate: no business logic in controllers or repositories, no `req`/`res` in services, no queries outside repositories.
-- [ ] A new domain has its model, repository, service, controller and routes, and its route file sits in `src/app/routes/` with full paths.
-- [ ] Classes are exported as singletons, files follow the naming rule, and handler methods don't use `this`.
+- [ ] The code follows the auth/users reference implementation (`.claude/rules/architecture.md`): one-line routes, controllers that call one service method, and repositories that pass `options` through and import models from `database/models`.
+- [ ] Expected failures are returned as `utils.error(httpStatus, id, message)` and sent with `utils.sendError`. Nothing throws for expected cases, and database errors are logged and become 500, never "not found".
+- [ ] Classes are exported as singletons, files follow the naming rule, methods have JSDoc `@param` and no prose comments, handlers don't use `this`, and requires have no cycles.
 
 ### Validation and security
-- [ ] Every body and query is validated with Zod through `SchemaParserMiddleware`. The middleware currently discards the body parse result, so code must not rely on transforms or defaults.
-- [ ] Protected routes require authentication plus role (RN02) and assignment (RN03, D13) checks. A driver can't reach another driver's data or an unassigned vehicle.
-- [ ] Passwords are hashed with bcrypt and never returned. JWTs expire. Secrets come only from the environment.
-- [ ] No raw SQL without bind parameters. No credentials or personal data in logs (the request logger prints full bodies).
+- [ ] Every body and query is validated with Zod through `SchemaParserMiddleware`. Messages use Zod 4's `{ error: '...' }`; `required_error` and `invalid_type_error` are silently ignored.
+- [ ] Protected routes use `AuthMiddleware` plus `roleMiddleware(...)` (RN02) and assignment checks (RN03, D13). Another user's or another fleet's resource is a 404. A driver can't reach another driver's data or an unassigned vehicle.
+- [ ] Passwords are hashed with bcrypt and never returned (`passwordHash` hidden by scope and `toJSON`). Login errors don't reveal whether an email exists. JWTs expire. Secrets come only from the environment.
+- [ ] No raw SQL without bind parameters. No credentials or personal data in logs (the logger masks `password` fields only).
 - [ ] Multi-step writes run in a transaction, and RN06/RN07 hold under concurrent requests.
 - [ ] Uploads have their type and size checked, get server-generated names and are linked to their record (RNF05, RN08).
 
@@ -36,8 +37,9 @@ Target: $ARGUMENTS. If empty, review the commits on this branch that aren't in `
 - [ ] Every endpoint has an `@swagger` block covering parameters, body, responses and `bearerAuth`.
 
 ### Tests
-- [ ] `src/tests/entrypoints/<domain>/` covers success, validation, 401, authorization and every business-rule `id`.
+- [ ] `src/tests/entrypoints/<domain>/` covers success, validation, 401, authorization and every business-rule `id`, grouped into `errors` and `success`.
 - [ ] The sequencer `order` is updated, test data is unique, and no test depends on another file's state.
+- [ ] `npm test` passes against a `_test` database.
 
 ### Memory
 - [ ] `.claude/docs/progress.md` reflects the change, and decisions are recorded only if the user confirmed them.

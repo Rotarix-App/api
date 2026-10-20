@@ -2,7 +2,9 @@
 
 Back end (Node.js · Express 5 · Sequelize/MySQL) for **Rotarix**, a mobile fleet-management app for truck managers and drivers, built for the carrier Transcarvalho as a university project (2026-08-17 → 2026-11-25). The React Native/Expo app is not in this repository.
 
-> **Status (2026-10-20): initialization phase.** The user asked for the data model, which exists but awaits approval (`docs/data-model.md`). Do **not** implement features (repositories, services, controllers, routes) until the user explicitly ends the initialization phase.
+> **Status (2026-10-20):**
+> - **Built at the user's request:** the data model (awaiting approval, `docs/data-model.md`) and the **auth and users** module (register, login, `/users/@me` profile, password, account deletion), which is the reference implementation.
+> - **Not started:** every other domain (fleets, vehicles, drivers, trips, expenses, metrics). Implement one only when the user asks for it.
 
 **The Figma prototype is the source of truth for functionality** (D09): [Rotarix — Protótipo Mobile](https://www.figma.com/design/dTeXHA65uZrG3dSnWH0rE8/Rotarix-%E2%80%94-Prot%C3%B3tipo-Mobile?node-id=25-2147). Its content is written down in `.claude/docs/prototype.md`.
 
@@ -10,14 +12,14 @@ Back end (Node.js · Express 5 · Sequelize/MySQL) for **Rotarix**, a mobile fle
 
 | Path | Contents | Loaded |
 |---|---|---|
-| `.claude/rules/architecture.md` | Stack, layers, response envelope, naming, code style, config | Always |
+| `.claude/rules/architecture.md` | Reference implementation, stack, layers, error objects, envelope, patterns from economix-api, naming, code style | Always |
 | `.claude/rules/domain.md` | Scope, roles, business rules, lifecycles, statuses, entities, pt-BR → English glossary | Always |
-| `.claude/rules/http-layer.md` | Routes, controllers, middlewares, Swagger | When touching those files |
+| `.claude/rules/http-layer.md` | Routes, controllers, middlewares, authentication (JWT, roles), Swagger | When touching those files |
 | `.claude/rules/data-layer.md` | Services, repositories, models, SQL schema | When touching those files or `data/` |
 | `.claude/rules/testing.md` | Jest/Supertest setup and conventions | When touching `src/tests/`, Jest or CI config |
 | `.claude/docs/prototype.md` | Functional spec of every prototype screen (S01–S37) and modal (M01–M24), with API implications | On demand |
 | `.claude/docs/data-model.md` | Every table and column with its source screen, relationships, constraints and assumptions; the ERD is in `docs/der/` | On demand |
-| `.claude/docs/requirements-analysis.md` | Lookup by task, RF and RNF digest, prototype-vs-docs alignment, open questions P01–P21 | On demand |
+| `.claude/docs/requirements-analysis.md` | Lookup by task, RF and RNF digest, prototype-vs-docs alignment, open questions P01–P22 | On demand |
 | `.claude/docs/decisions.md` | Confirmed decisions (D01–D26) and how to record new ones | On demand |
 | `.claude/docs/progress.md` | Work log, what exists in code, known issues, recommended plan | On demand |
 | `.claude/docs/project-brief.md` | Client, timeline, method, assumptions, risks, acceptance criteria | On demand |
@@ -40,7 +42,7 @@ Before working on a feature:
 
   Don't invent features, permissions or rules. Cite IDs (Sxx/Mxx, RF/RNF/RN/UC, Pxx, Dxx) whenever you state a requirement.
 - **Label what you say.** Keep documented facts, code evidence and proposals clearly apart. Write down open questions instead of guessing the answer.
-- **Ask first** before architectural decisions and destructive operations. Never run `data/db.sql` without explicit authorization, because it starts with `DROP DATABASE`. Confirm which database the tests will hit before running integration tests.
+- **Ask first** before architectural decisions and destructive operations. Never run `data/db.sql` yourself without explicit authorization, because it starts with `DROP DATABASE`. `npm test` runs it only against a database whose name ends in `_test`; the user authorized `rotarix_test` on their local MySQL.
 - **Done means verified.** Run the checks that fit the change, fix what fails and report limitations. Having the dependencies, folders or config in place doesn't make a feature done.
 - **Keep memory current.**
   - After relevant work, update `progress.md`.
@@ -61,5 +63,7 @@ Docs, code identifiers and test names are in English. Text the API returns to us
 docker compose up -d   # MySQL 8 on :3306, root/root, creates database "rotarix"
 npm install
 npm start              # needs .env (copy .env.example); listens on SERVER_PORT
-npm test               # jest --runInBand; NODE_ENV=test loads .env.test (database "rotarix_test")
+npm test               # jest --runInBand; recreates "rotarix_test" from data/db.sql, then runs the tests
 ```
+
+`npm test` reads `.env.test` (root/root). If the local MySQL uses other credentials, export the `MYSQL_*` variables first; the command is in `.claude/rules/testing.md`.

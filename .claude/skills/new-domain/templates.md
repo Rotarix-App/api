@@ -1,84 +1,146 @@
 # Layer templates
 
-These templates follow the conventions in `.claude/rules/` and use **fleet** as the example. Lines marked *Proposed* depend on a convention that's still open. Once the first domain is merged, replace this file with pointers to its real files.
-
-## Schema and model
-
-All 11 tables and models already exist; see `.claude/docs/data-model.md`.
-- **Real references:** `data/db.sql` (the `fleets` table), `src/app/database/models/fleet.js` and `models/associations.js`.
-- **New table:** follow the same pattern. Add the model to `models/index.js`, its associations to `associations.js`, and the entity to `docs/der/der.mmd`, then regenerate the image.
+These templates use **fleet** as the example (S06–S07, M01–M03, D10). They follow the auth/users reference implementation; when in doubt, copy from the real files listed in `SKILL.md`.
 
 ## Repository (`src/app/repositories/fleet.repository.js`)
 
 ```js
 const { Fleet } = require('../database/models')
+const utils = require('../utils')
 
 class FleetRepository {
-    async create(data, options = {}) {
-        return Fleet.create(data, options)
+    /**
+     * @param {object} where
+     * @param {{ transaction?: import('sequelize').Transaction }} options
+     */
+    async findAll(where = {}, options = {}) {
+        const fleets = await Fleet.findAll({ where, order: [['name', 'ASC']], ...options }).catch(utils.logError)
+        if (fleets === undefined) return utils.error(500, 'internal_server_error', 'Não foi possível consultar as frotas.')
+
+        return fleets
     }
 
+    /**
+     * @param {number} id
+     * @param {{ transaction?: import('sequelize').Transaction }} options
+     */
     async findById(id, options = {}) {
-        const fleet = await Fleet.findByPk(id, options)
-        if (!fleet) return { error: true, message: 'Frota não encontrada.', id: 'fleet_not_found' }
+        const fleet = await Fleet.findByPk(id, options).catch(utils.logError)
+        if (fleet === undefined) return utils.error(500, 'internal_server_error', 'Não foi possível consultar a frota.')
+        if (!fleet) return utils.error(404, 'fleet_not_found', 'Frota não encontrada.')
+
         return fleet
+    }
+
+    /**
+     * @param {object} data
+     * @param {{ transaction?: import('sequelize').Transaction }} options
+     */
+    async create(data, options = {}) {
+        const fleet = await Fleet.create(data, options).then((created) => created.reload(options)).catch(utils.logError)
+        if (!fleet) return utils.error(500, 'internal_server_error', 'Não foi possível criar a frota.')
+
+        return fleet
+    }
+
+    /**
+     * @param {number} id
+     * @param {object} data
+     * @param {{ transaction?: import('sequelize').Transaction }} options
+     */
+    async update(id, data, options = {}) {
+        const result = await Fleet.update(data, { where: { id }, ...options }).catch(utils.logError)
+        if (result === undefined) return utils.error(500, 'internal_server_error', 'Não foi possível atualizar a frota.')
+
+        return true
     }
 }
 
 module.exports = new FleetRepository()
 ```
 
-`options` lets services pass `{ transaction }`.
+When a table has a unique constraint, map `SequelizeUniqueConstraintError` to a 409 with a domain id, as `user.repository.js` does in `#writeError`.
 
 ## Service (`src/app/services/fleet.service.js`)
 
 ```js
-const fleetRepository = require('../repositories/fleet.repository')
+const FleetRepository = require('../repositories/fleet.repository')
 
 class FleetService {
+    /**
+     * @param {{ name: string, baseRegion: string, description?: string }} data
+     */
     async create(data) {
-        return fleetRepository.create(data)
+        return FleetRepository.create(data)
     }
 
-    async getById(fleetId) {
-        const fleet = await fleetRepository.findById(fleetId)
+    /**
+     * @param {number} id
+     * @param {{ name: string, baseRegion: string, description?: string }} data
+     */
+    async update(id, data) {
+        const fleet = await FleetRepository.findById(id)
         if (fleet.error) return fleet
 
-        // Access checks (RN02/RN03) and other business rules go here.
-        return fleet
+        const updated = await FleetRepository.update(id, data)
+        if (updated.error) return updated
+
+        return FleetRepository.findById(id)
     }
 }
 
 module.exports = new FleetService()
 ```
 
-For multi-step writes, use `connection.transaction(...)` (`const connection = require('../database')`). Pass `{ transaction, lock: true }` when reading a row you're about to update under RN06/RN07. In a managed transaction, returning an error object **commits**. Throw to roll back, or use an unmanaged transaction and call `rollback()` before you return the error.
+For multi-step writes (deleting a fleet: unlink vehicles, remove assignments, delete), use the unmanaged transaction pattern from `data-layer.md` and `user.service.js#deleteAccount`.
 
 ## Controller (`src/app/controllers/fleet.controller.js`)
 
 ```js
+const express = require('express')
 const { z } = require('zod')
-const fleetService = require('../services/fleet.service')
+const FleetService = require('../services/fleet.service')
+const utils = require('../utils')
 
 class FleetController {
     constructor() {
-        this.createSchema = z.object({
-            name: z.string({ error: 'Informe o nome da frota.' }).trim().min(1, 'Informe o nome da frota.'),
-            baseRegion: z.string({ error: 'Informe a base ou região.' }).trim().min(1, 'Informe a base ou região.'),
-            description: z.string().trim().max(255, 'A descrição deve ter até 255 caracteres.').optional()
+        this.fleetSchema = z.object({
+            name: z.string({ error: 'Informe o nome da frota.' }).trim().min(1, 'Informe o nome da frota.').max(100, 'O nome deve ter no máximo 100 caracteres.'),
+            baseRegion: z.string({ error: 'Informe a base ou região.' }).trim().min(1, 'Informe a base ou região.').max(120, 'A base ou região deve ter no máximo 120 caracteres.'),
+            description: z.string({ error: 'A descrição deve ser um texto.' }).trim().max(255, 'A descrição deve ter no máximo 255 caracteres.').optional()
         })
     }
 
-    // Routes pass handlers by reference, so don't use `this` inside them.
-    async create(req, res) {
-        const result = await fleetService.create(req.body)
+    /**
+     * 
+     * @param {express.Request} req 
+     * @param {express.Response} res 
+     */
+    async store(req, res) {
+        const fleet = await FleetService.create(req.body)
+        if (fleet.error) return utils.sendError(res, fleet)
 
-        if (result.error) {
-            // Proposed: the service sets `status` on its error objects.
-            return res.status(result.status ?? 400).json({ error: true, message: result.message, id: result.id })
-        }
+        return res.status(201).json({
+            error: false,
+            message: 'Frota criada com sucesso.',
+            data: fleet
+        })
+    }
 
-        return res.status(201).json({ error: false, message: 'Frota criada com sucesso.', data: result })
+    /**
+     * 
+     * @param {express.Request} req 
+     * @param {express.Response} res 
+     */
+    async update(req, res) {
+        const fleet = await FleetService.update(Number(req.params.id), req.body)
+        if (fleet.error) return utils.sendError(res, fleet)
+
+        return res.status(200).json({
+            error: false,
+            message: 'Frota atualizada com sucesso.',
+            data: fleet
+        })
     }
 }
 
@@ -88,11 +150,12 @@ module.exports = new FleetController()
 ## Routes (`src/app/routes/fleet.routes.js`)
 
 ```js
-const express = require('express')
-const SchemaParserMiddleware = require('../middlewares/schema.middleware')
-const fleetController = require('../controllers/fleet.controller')
+const Router = require('express').Router()
 
-const router = express.Router()
+const FleetController = require('../controllers/fleet.controller')
+const AuthMiddleware = require('../middlewares/auth.middleware')
+const roleMiddleware = require('../middlewares/role.middleware')
+const SchemaParserMiddleware = require('../middlewares/schema.middleware')
 
 /**
  * @swagger
@@ -110,23 +173,28 @@ const router = express.Router()
  *             type: object
  *             required: [name, baseRegion]
  *             properties:
- *               name: { type: string }
- *               baseRegion: { type: string }
+ *               name: { type: string, example: Grãos · Triângulo }
+ *               baseRegion: { type: string, example: 'Uberlândia, MG' }
  *               description: { type: string }
  *     responses:
  *       201:
  *         description: Fleet created
  *       400:
  *         description: invalid_schema
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
  *       401:
  *         description: unauthorized
+ *       403:
+ *         description: forbidden
  */
-// Auth and the manager-role check (RN02) go before the schema middleware once they exist.
-router.post('/fleets', SchemaParserMiddleware(fleetController.createSchema), fleetController.create)
+Router.post('/fleets', AuthMiddleware, roleMiddleware('manager'), SchemaParserMiddleware(FleetController.fleetSchema), FleetController.store)
+Router.put('/fleets/:id', AuthMiddleware, roleMiddleware('manager'), SchemaParserMiddleware(FleetController.fleetSchema), FleetController.update)
 
-module.exports = router
+module.exports = Router
 ```
 
 ## Tests
 
-See the pattern in `.claude/rules/testing.md`. Put the file at `src/tests/entrypoints/fleet/fleet.test.js` and add it to `order` in `src/tests/sequencer.js`.
+Follow the pattern in `.claude/rules/testing.md` (`errors` and `success` groups, `createTestUser`). Put the file at `src/tests/entrypoints/fleet/fleet.test.js` and add it to `order` in `src/tests/sequencer.js`.

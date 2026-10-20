@@ -118,7 +118,7 @@ Comparison done on 2026-10-20 between the official sources (the PDFs and the mar
 
 ### Still unanswered
 
-See P06, P07, P09–P12, P14–P21 below.
+See P06, P07, P09–P12, P14–P22 below.
 
 ## Open questions
 
@@ -145,8 +145,9 @@ P stands for *pending*. When the user answers one, record the answer and its dat
 | P17 | Maintenance has three types, but the expense categories only include "Manutenção de urgência". S16 and S17 show the same urgent maintenance in both lists. | How preventive and corrective maintenance costs count in spend totals and the category breakdown (S04) | Open |
 | P18 | S32 offers the "Combustível" category without liters or odometer, while refueling (S33) requires an odometer photo (RN08) and the hint points fuel to S33. | Whether "Combustível" in a plain expense is allowed or reserved for refueling | Open |
 | P19 | Without a trip, the forms (S32–S34) show a single vehicle card, and drivers can have several vehicles. | How the vehicle is chosen for records outside a trip | Open |
-| P20 | Flows the prototype doesn't draw: change password (RF03), reactivate a fleet (RF04) or a driver, deactivate a vehicle that isn't on a trip, delete a vehicle during a trip, the manager's view of an expense or maintenance record with its receipt, service-alert configuration (P09), the "at least one vehicle" assignment error (RF07), and empty, error and upload-failure states (P11). | Design these flows, or confirm the official rule applies | Open |
+| P20 | Flows the prototype doesn't draw: change password (RF03), reactivate a fleet (RF04) or a driver, deactivate a vehicle that isn't on a trip, delete a vehicle during a trip, the manager's view of an expense or maintenance record with its receipt, service-alert configuration (P09), the "at least one vehicle" assignment error (RF07), and empty, error and upload-failure states (P11). | Design these flows, or confirm the official rule applies | Open. The API already implements changing the password as RF03 describes (`PUT /users/@me/password`: current password plus confirmation); only the screen is missing. |
 | P21 | M10–M11 let a driver edit and delete expenses, with no limits shown. | Whether there are limits (for example after the trip is finished) and whether managers can edit or delete | Open |
+| P22 | M17 (driver deletes their own account) doesn't say what happens to a trip in progress. If the account were deleted anyway, the trip would stay in progress forever and keep its vehicle blocked (RN06). | Whether to block the deletion, or to cancel or close the trip automatically | Open. **Proposal implemented:** `DELETE /users/@me` returns 409 `trip_in_progress` until the trip is finished or cancelled. |
 
 ## Validation criteria (proposal)
 

@@ -6,39 +6,54 @@ paths:
   - "src/app/middlewares/**"
   - "src/app/handlers/**"
   - "src/app/config/**"
+  - "src/app/utils/**"
 ---
 
 # HTTP layer: routes, controllers, middlewares
 
+The reference implementation is `auth.routes.js`, `user.routes.js`, `auth.controller.js` and `user.controller.js`.
+
 ## Routes
 
-- Use one file per domain, `src/app/routes/<name>.routes.js`, exporting an `express.Router()`.
-- `routes.handler.js` mounts every `.js` file in that folder at `/`, in reverse alphabetical order, with no prefix. Declare full paths in the router (`/fleets/:id`) and keep them unique across files.
-- Chain: `router.<verb>(path, [auth], SchemaParserMiddleware(controller.bodySchema, controller.querySchema), controller.method)`.
-- Put an `@swagger` JSDoc block above every endpoint. swagger-jsdoc only scans `src/app/routes/*.js`. Document path, query and body parameters, the success response, every error `id`, and `security: [{ bearerAuth: [] }]` on authenticated routes.
+- Use one file per domain, `src/app/routes/<name>.routes.js`, starting with `const Router = require('express').Router()`.
+- `routes.handler.js` mounts every `.js` file in that folder at `/`, in reverse alphabetical order, with no prefix. Declare full paths (`/users/@me`, `/fleets/:id`) and keep them unique across files.
+- Write one line per endpoint: `Router.<verb>(path, [AuthMiddleware], [roleMiddleware('manager')], [SchemaParserMiddleware(Controller.bodySchema, Controller.querySchema)], Controller.method)`.
+- Routes for the signed-in user go under `/users/@me`.
+- Put an `@swagger` block above each endpoint, or above a group of endpoints that share a path.
+  - swagger-jsdoc only scans `src/app/routes/*.js`.
+  - Document the body, every error `id` with its status, and `security: [{ bearerAuth: [] }]`.
+  - Reuse the shared schemas in `config/swagger.js` (`User`, `UserResponse`, `AuthResponse`, `Error`), and add new shared schemas there.
 
 ## Controllers
 
-- A controller is a class whose Zod schemas are instance properties (`this.createSchema = z.object({...})`), exported as a singleton.
-- Methods are `async (req, res)`: read the input, call **one** service method and turn the result into a status and envelope.
-- Routes pass methods by reference, which loses `this`. Keep `this` out of handler methods (import the service at module level), or wrap the call in the route.
-- Service errors don't map to HTTP status codes yet, because services return only `{ error, message, id }`. Settle this on the first domain (one option is a `status` field in the error object), record it in `decisions.md` and update this rule.
-- Validation messages are in pt-BR. Without a custom message, Zod's default English message reaches the user.
+- A controller is a class whose Zod schemas are instance properties built in the constructor, exported as a singleton.
+- Build schemas from the shared fields in `src/app/utils/schemas.js` (`name`, `email`, `phone`, `password`, `cnhNumber`, `cnhCategory`, `role`), and add new reusable fields there.
+- Zod 4 syntax:
+  - Custom messages are `z.string({ error: '...' })` and `.min(n, '...')`; `required_error` and `invalid_type_error` are ignored by Zod 4.
+  - Use `z.discriminatedUnion` for role-dependent bodies, and `.refine(fn, { error, path })` for cross-field checks.
+  - Use `.trim()` and `.toLowerCase()` to normalize input; the middleware puts the parsed values into `req.body`.
+- Handlers are `async (req, res)`. They read the input, call **one** service method, then either:
+  - `if (result.error) return utils.sendError(res, result)`, or
+  - `res.status(200 | 201).json({ error: false, message: '<pt-BR>', data })`.
+- Routes pass handlers by reference, so handlers must not use `this`. Services are imported at module level.
+- Validation and response messages are in pt-BR.
 
 ## Middlewares
 
-| File | Behavior | Caveats |
-|---|---|---|
-| `schema.middleware.js` | Factory `(bodySchema, querySchema)`. Converts numeric-looking query values to numbers, validates with Zod and answers 400 `invalid_schema` with `data.errors` on failure. | The body parse result is discarded, so Zod transforms, defaults and stripping never reach `req.body`. Express 5 exposes `req.query` as a getter, so `req.query = ...` is a silent no-op in this non-strict module. Confirm and fix this before relying on coercion. |
-| `logger.middleware.js` | Logs IP, method, URL and the full body and query. Off in tests. | It will log passwords and personal data once auth exists. Redact before adding login. |
-| `private.auth.middleware.js` | Lets only 127.0.0.1 and ::1 through. | Meant for internal routes; it isn't user authentication. Behind a reverse proxy on the same host, every request comes from localhost and passes. Returns `error_id` instead of `id`. |
-| `auth.middleware.js` | *Not created yet.* Planned: verify `Authorization: Bearer <JWT>` and populate `req.account`. | Needed for RNF02, together with role (RN02) and assignment (RN03) checks. |
+| File | Behavior |
+|---|---|
+| `auth.middleware.js` | Requires `Authorization: Bearer <JWT>` and reloads the user on every request. Missing, invalid or expired token, or a deleted user: 401 `unauthorized`. Inactive user: 403 `account_inactive` (D24). On success it sets `req.user` (a Sequelize instance whose `toJSON` hides `passwordHash`). |
+| `role.middleware.js` | `roleMiddleware('manager')` or `roleMiddleware('manager', 'driver')`. Goes after `AuthMiddleware` and returns 403 `forbidden` for other roles (RN02). |
+| `schema.middleware.js` | `SchemaParserMiddleware(bodySchema, querySchema)`. Converts numeric-looking query values to numbers, parses with Zod and writes the parsed values back to `req.body` and `req.query`. Answers 400 `invalid_schema` with `data.errors`. Errors that aren't from Zod go to `next(err)`. |
+| `logger.middleware.js` | Logs IP, method, URL, body and query, with password fields replaced by `***`. Off in tests. |
+| `private.auth.middleware.js` | Lets only 127.0.0.1 and ::1 through, for internal routes. It isn't user authentication: behind a reverse proxy on the same host, every request passes. |
 
-The schema middleware is imported as `SchemaParserMiddleware`:
+## Authentication
 
-```js
-const SchemaParserMiddleware = require('../middlewares/schema.middleware')
-```
+- **JWT:** payload `{ sub: '<user id>', role }`, signed with `JWT_SECRET`, expires in 7 days (`AuthService`). There's no revocation list: a token stays valid until it expires, but a deleted or deactivated user is rejected because the middleware reloads the user.
+- **Passwords:** bcrypt with cost 10. The policy is 8–72 characters with upper case, lower case and a digit (`utils/schemas.js`).
+- **Login:** an unknown email and a wrong password both return 401 `invalid_credentials`. A bcrypt comparison runs either way, so the response time doesn't reveal which accounts exist.
+- **Logout:** happens on the client, which discards the token. There's no endpoint.
 
 ## Swagger
 

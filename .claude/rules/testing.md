@@ -8,76 +8,85 @@ paths:
 
 # Testing
 
+The reference implementation is `src/tests/entrypoints/auth/auth.test.js`, `users/users.test.js` and `unit/role.middleware.test.js`.
+
 ## Setup
 
-- The stack is Jest 30 with Supertest. `npm test` runs `jest --runInBand`.
-- `testMatch` is `src/tests/**/*.test.js`. There are no test files yet.
-- `setupFilesAfterEnv` runs `src/tests/setup/global.js`, which requires `src/index.js` and exposes the Express app as `global.app`. It does **not** create the database or tables.
-- Jest sets `NODE_ENV=test`, so `src/index.js` loads `.env.test` (database `rotarix_test`), the HTTP server doesn't start, and the request logger is off. Importing `src/index.js` also calls `console.clear()`.
-- The custom sequencer `src/tests/sequencer.js` runs the files in its `order` array first, in that order, and the rest alphabetically. When you add a domain, add its test file to `order` in dependency order (accounts before fleets before vehicles, for example).
-- CI (`.github/workflows/test.yml`) starts a MySQL 8 service, runs `data/db.sql`, then runs `npm test` with environment variables pointing at database `rotarix`. Those variables override `.env.test`, so CI and local runs use different databases.
-- Locally, nothing creates `rotarix_test` or its schema. Before running integration tests, confirm with the user which database they'll hit. Never point tests at a database that holds real data.
-- If MySQL is unreachable, `database/index.js` calls `process.exit()` and the Jest run dies with status 0.
+- The stack is Jest 30 with Supertest. `npm test` runs `jest --runInBand`. Every run needs MySQL.
+- `globalSetup` (`src/tests/setup/database.js`):
+  - recreates the test database from `data/db.sql` before every run;
+  - **refuses to run unless `MYSQL_DATABASE` ends in `_test`**;
+  - rewrites only the `DROP`, `CREATE` and `USE` statements, so `rotarix` itself is never touched.
+- `setupFilesAfterEnv` (`src/tests/setup/global.js`) exposes the Express app as `global.app`. After each file it waits for `connection.ready` and closes the Sequelize connection; without that wait, fast files tear down mid-handshake and the run exits with code 1.
+- Jest sets `NODE_ENV=test`, so `.env.test` is loaded (`rotarix_test`, root/root on localhost:3306), the HTTP server doesn't start, and the request logger is off.
+- **Local MySQL with other credentials:** variables that are already set win over `.env.test`. The user authorized `rotarix_test` on their local MySQL (2026-10-20). To use the credentials from `.env` without printing them:
+
+  ```bash
+  ( set -a; eval "$(grep -E '^MYSQL_(HOST|PORT|USERNAME|PASSWORD)=' .env | tr -d '\r')"; set +a; MYSQL_DATABASE=rotarix_test npm test )
+  ```
+
+- **CI** (`.github/workflows/test.yml`) starts a MySQL 8 service and runs `npm test` with `MYSQL_DATABASE=rotarix_test`; `globalSetup` builds the schema.
+- The custom sequencer `src/tests/sequencer.js` runs the files in its `order` array first (currently `auth.test.js`, `users.test.js`), then the rest alphabetically. Add each new domain's file in dependency order. Tests must still pass in any order.
 
 ## Structure
 
 ```
 src/tests/
 ├── sequencer.js
-├── setup/global.js
+├── setup/database.js                       # globalSetup: recreates the _test database
+├── setup/global.js                         # global.app, closes the connection
 ├── entrypoints/<domain>/<domain>.test.js   # integration tests, one folder per domain
-└── utils/<domain>.util.js                  # fixtures and helpers (createTestAccount, getAuthToken, ...)
+├── unit/<file>.test.js                     # tests without HTTP (middlewares, pure helpers)
+└── utils/<domain>.util.js                  # fixtures: user.util.js (buildUser, createTestUser)
 ```
 
 ## Pattern
 
-This example is illustrative; no routes exist yet.
+Group each endpoint into `errors` and `success`:
 
 ```js
 const request = require('supertest')
-const { getAuthToken } = require('../../utils/account.util')
+const { createTestUser } = require('../../utils/user.util')
 
 describe('POST /fleets', () => {
-    let token
+    describe('errors', () => {
+        test('Should return 403 for a driver', async () => {
+            const { token } = await createTestUser('driver')
 
-    beforeAll(async () => {
-        token = await getAuthToken({ role: 'manager' })
+            const response = await request(global.app)
+                .post('/fleets')
+                .set('Authorization', `Bearer ${token}`)
+                .send({ name: 'Grãos Triângulo', baseRegion: 'Uberlândia, MG' })
+
+            expect(response.status).toBe(403)
+            expect(response.body.id).toBe('forbidden')
+        })
     })
 
-    test('Should create a fleet with valid data', async () => {
-        const response = await request(global.app)
-            .post('/fleets')
-            .set('Authorization', `Bearer ${token}`)
-            .send({ name: `Fleet ${Date.now()}`, baseRegion: 'Patos de Minas, MG' })
+    describe('success', () => {
+        test('Should create a fleet', async () => {
+            const { token } = await createTestUser('manager')
 
-        expect(response.status).toBe(201)
-        expect(response.body.error).toBe(false)
-        expect(response.body.data).toBeDefined()
-    })
+            const response = await request(global.app)
+                .post('/fleets')
+                .set('Authorization', `Bearer ${token}`)
+                .send({ name: 'Grãos Triângulo', baseRegion: 'Uberlândia, MG' })
 
-    test('Should reject a missing name', async () => {
-        const response = await request(global.app)
-            .post('/fleets')
-            .set('Authorization', `Bearer ${token}`)
-            .send({ baseRegion: 'Patos de Minas, MG' })
-
-        expect(response.status).toBe(400)
-        expect(response.body.id).toBe('invalid_schema')
-    })
-
-    test('Should return 401 without a token', async () => {
-        const response = await request(global.app).post('/fleets').send({})
-
-        expect(response.status).toBe(401)
+            expect(response.status).toBe(201)
+            expect(response.body.error).toBe(false)
+        })
     })
 })
 ```
 
+- `createTestUser(role, overrides)` registers a user with a unique email through `POST /register` and returns `{ payload, token, user }`.
+- To set up state the API can't create yet (a trip, an inactive user), use the models directly, imported from `src/app/database/models`. `startTripFor` in `users.test.js` is an example.
+
 ## Conventions
 
 - Write test names in English (`describe`, `test('Should ...')`).
-- For every endpoint, cover success, schema validation (400 `invalid_schema`), authentication (401), authorization by role and assignment (RN02/RN03), and every business-rule error `id`.
+- For every endpoint, cover success, schema validation (400 `invalid_schema`), authentication (401), authorization by role and assignment (403/404, RN02/RN03), and every business-rule error `id`.
 - Assert on `response.body.id`, not on the pt-BR `message`.
-- Check that no response exposes `password`.
-- Generate unique data per test (suffix emails and plates with a timestamp, for example). Don't depend on state left by other test files.
+- Check that no response exposes `passwordHash`.
+- Generate unique data per test (emails come from `buildUser`; suffix plates and names with a timestamp). Don't depend on state left by other tests.
 - Put reusable helpers in `src/tests/utils/`.
