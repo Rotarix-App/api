@@ -12,14 +12,14 @@ Stop and ask the user if any of these fails.
 
 - **Implementation is authorized.** Check the status line in `.claude/CLAUDE.md`. While the initialization phase is active, don't write feature code.
 - **There's an agreed spec.** If there isn't one, run `/feature-spec` first. The open questions (Pxx) that block this domain must have answers recorded in `.claude/docs/decisions.md`.
-- **For the first domain only,** these conventions are still open: multi-word file names, how service errors map to HTTP status, JSON field casing and model timestamps. Propose one option for each, get approval, then record it in `decisions.md` and the matching rule.
+- **For the first domain only,** one convention is still open: how service errors map to HTTP status. Propose an option, get approval, then record it in `decisions.md` and `http-layer.md`. File names, JSON casing and timestamps were settled with the data model (`data-model.md`).
 
 ## Steps (inside out)
 
 Read `.claude/rules/http-layer.md`, `data-layer.md` and `testing.md` first. Code templates are in [templates.md](templates.md).
 
-1. **Schema.** Add the table(s) to `data/db.sql`. Don't run the script.
-2. **Model.** Create `src/app/database/models/<name>.js` and add its associations to `models/associations.js`.
+1. **Schema and model.** The tables and models already exist (`.claude/docs/data-model.md`). If the domain needs a change, edit `data/db.sql`, the model, `models/associations.js` and `docs/der/der.mmd` together, and regenerate the ERD image. Don't run the script.
+2. **Imports.** Load models through `require('../database/models')`, never file by file.
 3. **Repository.** Create `src/app/repositories/<name>.repository.js`.
 4. **Service.** Create `src/app/services/<name>.service.js` with the business rules and transactions.
 5. **Controller.** Create `src/app/controllers/<name>.controller.js` with the Zod schemas and pt-BR messages.

@@ -10,6 +10,7 @@ A static diagnosis of this checkout, last updated 2026-10-20. It doesn't cover o
 | 2026-10-20 | Moved all agent material into `.claude/` and rewrote it in English: the `CLAUDE.md` entry point; path-scoped rules for architecture, domain, the HTTP layer, the data layer and testing, derived from the code; and the skills `feature-spec`, `new-domain` and `api-review`, which replace `.github/prompts/`. Moved the official sources verbatim to `docs/sources/` and cut the root `AGENTS.md` down to a pointer. No application code changed. |
 | 2026-10-20 | Compared the project against the reference PDFs (identical to `sources/`) and the Figma prototype v1.0 (61 frames). At the user's request, the prototype became the functional source of truth (D09). Wrote `docs/prototype.md`, derived decisions D10–D26, resolved or narrowed P01, P02, P04–P06, P08, P10 and P12–P14, added P17–P21, and rewrote `rules/domain.md`. No application code changed. |
 | 2026-10-20 | Removed Socket.IO at the user's request: deleted `src/app/socket/socketio.js`, the socket setup in `src/app/index.js`, and the `socket.io` dependency and its packages in `package-lock.json`; updated the rules and docs. Checked with `node --check` and `npm ls --package-lock-only`; the server wasn't started because dependencies aren't installed. |
+| 2026-10-20 | At the user's request, wrote the data model from the prototype: 11 Sequelize models, `models/index.js` (the only safe way to import them; direct imports break the associations), all associations, the full schema in `data/db.sql`, `docs/data-model.md`, and the ERD in `docs/der/` (Mermaid source plus PNG and SVG). Checked with a script: all models load through `models/index.js`, the associations resolve, and every model's columns and nullability match `db.sql`. The SQL was **not** run against MySQL: Docker Desktop was off. Installed `node_modules` with `npm ci`. Updated the rules and the `new-domain` templates. |
 
 ## What exists (not run)
 
@@ -19,14 +20,14 @@ A static diagnosis of this checkout, last updated 2026-10-20. It doesn't cover o
 | `src/app/handlers/routes.handler.js` | Auto-mounts route files. The folder holds only `.gitkeep`. |
 | `src/app/config/swagger.js` | `/api-docs`, OpenAPI 3, bearer scheme. No business endpoints are annotated. |
 | `src/app/database/index.js` | Sequelize/MySQL configuration. It connects only when imported, and a working connection hasn't been verified. |
+| `src/app/database/models/`, `data/db.sql`, `docs/der/` | 11 models and their associations, the full schema and the ERD (see `docs/data-model.md`). They load and match each other; the schema hasn't been run against MySQL and awaits approval. |
 | `src/app/middlewares/` | Zod validation, request logger, localhost-only guard. No user or JWT authentication. |
 | `docker-compose.yml`, `.github/workflows/test.yml` | MySQL 8, plus a CI pipeline (install, SQL script, Jest). A successful CI run hasn't been verified. |
 | `jest.config.js`, `src/tests/setup/global.js`, `src/tests/sequencer.js` | Test infrastructure with no `*.test.js` files. |
 
 ## Missing
 
-- No RF01–RF13 functionality. Controllers, services, repositories and routes contain only `.gitkeep`, and `models/` has only a commented example of associations.
-- `data/db.sql` creates the database but no domain tables.
+- No RF01–RF13 functionality. Controllers, services, repositories and routes contain only `.gitkeep`; only the data model exists.
 - No authentication or authorization, operational management, uploads, odometer photos, metrics, alerts or anonymization.
 - No React Native/Expo app in this checkout.
 - No evidence of redundant infrastructure, performance tests or client acceptance.
@@ -46,14 +47,14 @@ A static diagnosis of this checkout, last updated 2026-10-20. It doesn't cover o
 
 ## Validation and limits
 
-Static inspection of all code, test configuration, the workflow, the SQL script and the former prompts. Dependencies aren't installed (`node_modules` is missing) and there are no test suites. Nobody has run `npm test`, started the server or applied the SQL script. No feature is classified as done.
+Static inspection of all code, test configuration, the workflow, the SQL script and the former prompts. Dependencies are installed (2026-10-20), but there are no test suites. Nobody has run `npm test`, started the server or applied the SQL script. The models were loaded and compared with `db.sql` by a script, without a database. No feature is classified as done.
 
 ## Recommended plan
 
 This is a recommendation, not an approved schedule. The user sets the priorities. Location tracking, chat and offline mode aren't included by inference.
 
 1. Answer P07 (managers, companies and ownership, together with the rest of P06), P12 (finishing a trip after the driver is deactivated) and P17–P19 (how maintenance and fuel count as expenses, and the vehicle for records outside a trip). Get the missing flows designed (P20). Record whether the client validated the prototype (P16). Get the approval to implement.
-2. Specify the data model, HTTP contracts and authorization from `prototype.md`, and settle the first-domain conventions. Set up an isolated test database without running the destructive script against existing data.
+2. Approve the data model (`data-model.md`) or adjust it to the answers from step 1, and run `db.sql` on a throwaway MySQL to validate it. Specify the HTTP contracts and authorization from `prototype.md`, and settle how service errors map to HTTP status. Set up an isolated test database without running the destructive script against existing data.
 3. Build accounts (S01–S03, S19–S20, S36–S37: sign-up, login, profile, password, logout, deletion) with hashing, authorization and tests. Redact the logger first.
 4. Build fleets, vehicles, drivers and assignments (S06–S14, M01–M09), with permission tests and the effects of deactivation and deletion (D11–D13, D24).
 5. Build image storage, then trips and odometer readings (S25–S30, M12–M13, M18; RN06–RN08, D20), with concurrency safety and mandatory photos.

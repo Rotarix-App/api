@@ -57,8 +57,15 @@ The repository already uses Node.js/CommonJS, Express 5, Sequelize, Zod, JWT/bcr
 ## Not approved yet
 
 - The development plan in [`progress.md`](progress.md), and the validation criteria in [`requirements-analysis.md`](requirements-analysis.md).
-- No choice yet on hosting, image storage, the physical schema, a multi-company model (P07) or how service alerts are configured (P09).
-- Conventions to settle with the first domain: multi-word file names, how service errors map to HTTP status, JSON field casing and model timestamps (see `.claude/rules/`).
+- No choice yet on hosting, image storage or how service alerts are configured (P09).
+- **Physical schema** ([`data-model.md`](data-model.md), written 2026-10-20 at the user's request): the models and `data/db.sql` exist, but the schema awaits approval. These are applied as proposals:
+  - a single company (P07);
+  - separate tables for refuelings and maintenances (P17, P18);
+  - `service_reminders` (P09);
+  - Sequelize `DATETIME` timestamps instead of the BIGINT template;
+  - camelCase attributes mapped to snake_case columns;
+  - kebab-case for multi-word file names.
+- Convention still to settle with the first domain: how service errors map to HTTP status.
 
 ## Recording a new decision
 

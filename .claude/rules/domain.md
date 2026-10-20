@@ -92,7 +92,9 @@ Which fleets a manager is responsible for, and whether companies are isolated fr
 | Trip | in progress, finished, cancelled (*Em andamento*, *Concluída*, cancelled) |
 | Maintenance type | preventive, corrective, urgent (*Preventiva*, *Corretiva*, *Urgência*) |
 
-## Conceptual entities
+## Entities
+
+Summary only. The physical schema (tables, columns, constraints) is in `.claude/docs/data-model.md`, and the ERD in `docs/der/der.png`.
 
 | Entity | Data and links |
 |---|---|
@@ -105,8 +107,10 @@ Which fleets a manager is responsible for, and whether companies are isolated fr
 | Refueling | liters, price per liter, total, odometer with photo, gas station, invoice photo; counts as a Combustível expense |
 | Maintenance | type, service, amount, workshop, odometer with photo, invoice photo, vehicle, trip if any |
 | Photo | odometer, receipt or invoice image linked to its record, stored outside MySQL (RNF05) |
+| Odometer reading | every reading of a vehicle (manual, trip start or end, refueling, maintenance) with its photo; the source of RN07 |
+| Service reminder | a vehicle's next service by km ("Revisão", "Troca de óleo"); a proposal (P09) |
 
-Still undecided: whether refueling and maintenance are separate tables or expense subtypes (P17, P18); how managers relate to fleets and companies (P07).
+The data model applies these as proposals awaiting approval: one company (P07), and refueling and maintenance as separate tables (P17, P18).
 
 ## Glossary (pt-BR → English)
 

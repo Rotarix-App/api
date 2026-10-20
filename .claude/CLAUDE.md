@@ -2,7 +2,7 @@
 
 Back end (Node.js · Express 5 · Sequelize/MySQL) for **Rotarix**, a mobile fleet-management app for truck managers and drivers, built for the carrier Transcarvalho as a university project (2026-08-17 → 2026-11-25). The React Native/Expo app is not in this repository.
 
-> **Status (2026-10-20): initialization phase.** Documentation and code inspection only. Do **not** implement features until the user explicitly ends the initialization phase.
+> **Status (2026-10-20): initialization phase.** The user asked for the data model, which exists but awaits approval (`docs/data-model.md`). Do **not** implement features (repositories, services, controllers, routes) until the user explicitly ends the initialization phase.
 
 **The Figma prototype is the source of truth for functionality** (D09): [Rotarix — Protótipo Mobile](https://www.figma.com/design/dTeXHA65uZrG3dSnWH0rE8/Rotarix-%E2%80%94-Prot%C3%B3tipo-Mobile?node-id=25-2147). Its content is written down in `.claude/docs/prototype.md`.
 
@@ -16,6 +16,7 @@ Back end (Node.js · Express 5 · Sequelize/MySQL) for **Rotarix**, a mobile fle
 | `.claude/rules/data-layer.md` | Services, repositories, models, SQL schema | When touching those files or `data/` |
 | `.claude/rules/testing.md` | Jest/Supertest setup and conventions | When touching `src/tests/`, Jest or CI config |
 | `.claude/docs/prototype.md` | Functional spec of every prototype screen (S01–S37) and modal (M01–M24), with API implications | On demand |
+| `.claude/docs/data-model.md` | Every table and column with its source screen, relationships, constraints and assumptions; the ERD is in `docs/der/` | On demand |
 | `.claude/docs/requirements-analysis.md` | Lookup by task, RF and RNF digest, prototype-vs-docs alignment, open questions P01–P21 | On demand |
 | `.claude/docs/decisions.md` | Confirmed decisions (D01–D26) and how to record new ones | On demand |
 | `.claude/docs/progress.md` | Work log, what exists in code, known issues, recommended plan | On demand |

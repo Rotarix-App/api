@@ -1,0 +1,163 @@
+---
+title: Rotarix — Entity-Relationship Diagram
+---
+erDiagram
+    fleets |o--o{ users : "fleet_id (drivers)"
+    fleets |o--o{ vehicles : "fleet_id"
+    users ||--o{ vehicle_assignments : "driver_id"
+    vehicles ||--o{ vehicle_assignments : "vehicle_id"
+    users ||--o{ photos : "uploaded_by"
+    vehicles ||--o{ odometer_readings : "vehicle_id"
+    users ||--o{ odometer_readings : "recorded_by"
+    photos |o--o| odometer_readings : "photo_id"
+    users ||--o{ trips : "driver_id"
+    vehicles ||--o{ trips : "vehicle_id"
+    odometer_readings ||--o| trips : "start_reading_id"
+    odometer_readings |o--o| trips : "end_reading_id"
+    users ||--o{ expenses : "driver_id"
+    vehicles ||--o{ expenses : "vehicle_id"
+    trips |o--o{ expenses : "trip_id"
+    photos |o--o| expenses : "receipt_photo_id"
+    users ||--o{ refuelings : "driver_id"
+    vehicles ||--o{ refuelings : "vehicle_id"
+    trips |o--o{ refuelings : "trip_id"
+    odometer_readings ||--o| refuelings : "odometer_reading_id"
+    photos |o--o| refuelings : "invoice_photo_id"
+    users ||--o{ maintenances : "driver_id"
+    vehicles ||--o{ maintenances : "vehicle_id"
+    trips |o--o{ maintenances : "trip_id"
+    odometer_readings ||--o| maintenances : "odometer_reading_id"
+    photos |o--o| maintenances : "invoice_photo_id"
+    vehicles ||--o{ service_reminders : "vehicle_id"
+    maintenances |o--o{ service_reminders : "completed_maintenance_id"
+
+    fleets {
+        int id PK
+        varchar(100) name
+        varchar(120) base_region
+        varchar(255) description "nullable"
+        enum status "active | inactive"
+        datetime created_at
+        datetime updated_at
+    }
+    users {
+        int id PK
+        enum role "manager | driver"
+        varchar(120) name
+        varchar(160) email UK
+        varchar(255) password_hash
+        varchar(20) phone "nullable"
+        varchar(11) cnh_number "nullable, drivers"
+        enum cnh_category "B | C | D | E, nullable"
+        int fleet_id FK "nullable, drivers"
+        enum status "active | inactive"
+        datetime created_at
+        datetime updated_at
+        datetime deleted_at "nullable, soft delete"
+    }
+    vehicles {
+        int id PK
+        int fleet_id FK "nullable"
+        varchar(7) plate UK "unique while not deleted"
+        varchar(60) brand
+        varchar(60) model
+        smallint year
+        int current_odometer "km, last reading"
+        enum status "active | inactive"
+        datetime created_at
+        datetime updated_at
+        datetime deleted_at "nullable, soft delete"
+    }
+    vehicle_assignments {
+        int id PK
+        int driver_id FK "UK with vehicle_id"
+        int vehicle_id FK
+        datetime created_at
+        datetime updated_at
+    }
+    photos {
+        int id PK
+        enum kind "odometer | receipt | invoice"
+        varchar(255) storage_key UK
+        varchar(50) mime_type
+        int size_bytes
+        int uploaded_by FK
+        datetime created_at
+        datetime updated_at
+    }
+    odometer_readings {
+        int id PK
+        int vehicle_id FK
+        int recorded_by FK
+        int value_km
+        enum source "manual | trip_start | trip_end | refueling | maintenance"
+        int photo_id FK "nullable, unique"
+        datetime created_at
+        datetime updated_at
+    }
+    trips {
+        int id PK
+        int driver_id FK
+        int vehicle_id FK
+        varchar(120) origin
+        varchar(120) destination
+        enum status "in_progress | finished | cancelled"
+        int start_reading_id FK "unique"
+        int end_reading_id FK "nullable, unique"
+        varchar(500) notes "nullable"
+        datetime started_at
+        datetime ended_at "nullable"
+        datetime created_at
+        datetime updated_at
+    }
+    expenses {
+        int id PK
+        int driver_id FK
+        int vehicle_id FK
+        int trip_id FK "nullable"
+        enum category "fuel | toll | food | tire_repair | urgent_maintenance"
+        decimal amount "10,2"
+        varchar(255) description "nullable"
+        int receipt_photo_id FK "nullable, unique"
+        datetime created_at
+        datetime updated_at
+    }
+    refuelings {
+        int id PK
+        int driver_id FK
+        int vehicle_id FK
+        int trip_id FK "nullable"
+        int odometer_reading_id FK "unique"
+        decimal liters "8,2"
+        decimal price_per_liter "8,3"
+        decimal total_amount "10,2"
+        varchar(120) gas_station
+        int invoice_photo_id FK "nullable, unique"
+        datetime created_at
+        datetime updated_at
+    }
+    maintenances {
+        int id PK
+        int driver_id FK
+        int vehicle_id FK
+        int trip_id FK "nullable"
+        int odometer_reading_id FK "unique"
+        enum type "preventive | corrective | urgent"
+        varchar(255) service
+        decimal amount "10,2"
+        varchar(120) workshop
+        int invoice_photo_id FK "nullable, unique"
+        datetime created_at
+        datetime updated_at
+    }
+    service_reminders {
+        int id PK
+        int vehicle_id FK
+        varchar(60) title
+        int due_odometer "km"
+        int interval_km "nullable"
+        int completed_maintenance_id FK "nullable"
+        datetime completed_at "nullable"
+        datetime created_at
+        datetime updated_at
+    }

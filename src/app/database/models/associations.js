@@ -1,8 +1,66 @@
-// Associações entre models do Sequelize.
-//
-// Exemplo:
-// const Parent = require("./parent")
-// const Child = require("./child")
-//
-// Parent.hasMany(Child, { foreignKey: "parent_id", as: "children" })
-// Child.belongsTo(Parent, { foreignKey: "parent_id" })
+const User = require('./user')
+const Fleet = require('./fleet')
+const Vehicle = require('./vehicle')
+const VehicleAssignment = require('./vehicle-assignment')
+const Photo = require('./photo')
+const OdometerReading = require('./odometer-reading')
+const Trip = require('./trip')
+const Expense = require('./expense')
+const Refueling = require('./refueling')
+const Maintenance = require('./maintenance')
+const ServiceReminder = require('./service-reminder')
+
+Fleet.hasMany(User, { foreignKey: 'fleetId', as: 'drivers' })
+User.belongsTo(Fleet, { foreignKey: 'fleetId', as: 'fleet' })
+
+Fleet.hasMany(Vehicle, { foreignKey: 'fleetId', as: 'vehicles' })
+Vehicle.belongsTo(Fleet, { foreignKey: 'fleetId', as: 'fleet' })
+
+User.belongsToMany(Vehicle, { through: VehicleAssignment, foreignKey: 'driverId', otherKey: 'vehicleId', as: 'assignedVehicles' })
+Vehicle.belongsToMany(User, { through: VehicleAssignment, foreignKey: 'vehicleId', otherKey: 'driverId', as: 'assignedDrivers' })
+VehicleAssignment.belongsTo(User, { foreignKey: 'driverId', as: 'driver' })
+VehicleAssignment.belongsTo(Vehicle, { foreignKey: 'vehicleId', as: 'vehicle' })
+
+Photo.belongsTo(User, { foreignKey: 'uploadedBy', as: 'uploader' })
+
+Vehicle.hasMany(OdometerReading, { foreignKey: 'vehicleId', as: 'odometerReadings' })
+OdometerReading.belongsTo(Vehicle, { foreignKey: 'vehicleId', as: 'vehicle' })
+OdometerReading.belongsTo(User, { foreignKey: 'recordedBy', as: 'recorder' })
+OdometerReading.belongsTo(Photo, { foreignKey: 'photoId', as: 'photo' })
+
+User.hasMany(Trip, { foreignKey: 'driverId', as: 'trips' })
+Trip.belongsTo(User, { foreignKey: 'driverId', as: 'driver' })
+Vehicle.hasMany(Trip, { foreignKey: 'vehicleId', as: 'trips' })
+Trip.belongsTo(Vehicle, { foreignKey: 'vehicleId', as: 'vehicle' })
+Trip.belongsTo(OdometerReading, { foreignKey: 'startReadingId', as: 'startReading' })
+Trip.belongsTo(OdometerReading, { foreignKey: 'endReadingId', as: 'endReading' })
+
+User.hasMany(Expense, { foreignKey: 'driverId', as: 'expenses' })
+Expense.belongsTo(User, { foreignKey: 'driverId', as: 'driver' })
+Vehicle.hasMany(Expense, { foreignKey: 'vehicleId', as: 'expenses' })
+Expense.belongsTo(Vehicle, { foreignKey: 'vehicleId', as: 'vehicle' })
+Trip.hasMany(Expense, { foreignKey: 'tripId', as: 'expenses' })
+Expense.belongsTo(Trip, { foreignKey: 'tripId', as: 'trip' })
+Expense.belongsTo(Photo, { foreignKey: 'receiptPhotoId', as: 'receiptPhoto' })
+
+User.hasMany(Refueling, { foreignKey: 'driverId', as: 'refuelings' })
+Refueling.belongsTo(User, { foreignKey: 'driverId', as: 'driver' })
+Vehicle.hasMany(Refueling, { foreignKey: 'vehicleId', as: 'refuelings' })
+Refueling.belongsTo(Vehicle, { foreignKey: 'vehicleId', as: 'vehicle' })
+Trip.hasMany(Refueling, { foreignKey: 'tripId', as: 'refuelings' })
+Refueling.belongsTo(Trip, { foreignKey: 'tripId', as: 'trip' })
+Refueling.belongsTo(OdometerReading, { foreignKey: 'odometerReadingId', as: 'odometerReading' })
+Refueling.belongsTo(Photo, { foreignKey: 'invoicePhotoId', as: 'invoicePhoto' })
+
+User.hasMany(Maintenance, { foreignKey: 'driverId', as: 'maintenances' })
+Maintenance.belongsTo(User, { foreignKey: 'driverId', as: 'driver' })
+Vehicle.hasMany(Maintenance, { foreignKey: 'vehicleId', as: 'maintenances' })
+Maintenance.belongsTo(Vehicle, { foreignKey: 'vehicleId', as: 'vehicle' })
+Trip.hasMany(Maintenance, { foreignKey: 'tripId', as: 'maintenances' })
+Maintenance.belongsTo(Trip, { foreignKey: 'tripId', as: 'trip' })
+Maintenance.belongsTo(OdometerReading, { foreignKey: 'odometerReadingId', as: 'odometerReading' })
+Maintenance.belongsTo(Photo, { foreignKey: 'invoicePhotoId', as: 'invoicePhoto' })
+
+Vehicle.hasMany(ServiceReminder, { foreignKey: 'vehicleId', as: 'serviceReminders' })
+ServiceReminder.belongsTo(Vehicle, { foreignKey: 'vehicleId', as: 'vehicle' })
+ServiceReminder.belongsTo(Maintenance, { foreignKey: 'completedMaintenanceId', as: 'completedMaintenance' })

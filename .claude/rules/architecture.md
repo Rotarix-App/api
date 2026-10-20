@@ -1,6 +1,6 @@
 # Architecture and conventions
 
-These rules describe the code as it is today and the conventions for new code. Where the two differ, the rule says so. No business domain has been implemented yet. The first domain you build becomes the reference implementation, so update these rules to point at it.
+These rules describe the code as it is today and the conventions for new code. Where the two differ, the rule says so. The data model exists (`.claude/docs/data-model.md`), but no domain has repositories, services, controllers or routes yet. The first domain you build becomes the reference implementation, so update these rules to point at it.
 
 ## Stack
 
@@ -19,11 +19,12 @@ src/
 │   ├── handlers/routes.handler.js  # mounts every src/app/routes/*.js at "/"
 │   ├── routes/ controllers/ services/ repositories/   # empty (.gitkeep)
 │   ├── database/index.js        # Sequelize connection (exported first), then loads models/associations.js
-│   ├── database/models/         # Sequelize models + associations.js
+│   ├── database/models/         # 11 Sequelize models, associations.js, index.js (import models from here)
 │   ├── middlewares/             # logger, private.auth (localhost only), schema (Zod)
 │   └── utils/index.js           # singleton Utils (empty)
 └── tests/                       # see testing rule
 data/db.sql                      # schema script (destructive: drops the database first)
+docs/der/                        # ERD: der.mmd (source), der.png, der.svg
 ```
 
 ## Layers
@@ -59,7 +60,8 @@ Services and repositories report expected failures by **returning** `{ error: tr
 - CommonJS (`require` / `module.exports`).
 - Controllers, services, repositories and utils are classes exported as singleton instances: `module.exports = new FleetService()`.
 - Middlewares are plain `(req, res, next)` functions. Configurable ones are factories: `schema.middleware.js` exports `(bodySchema, querySchema) => middleware`. Express types come from JSDoc (`@param {express.Request} req`).
-- File names are lowercase and dot-separated, `<name>.<layer>.js` (`private.auth.middleware.js`, `routes.handler.js`). Multi-word names aren't settled yet. The old prompt said kebab-case, but no file uses it. Ask before creating the first multi-word file.
+- File names are lowercase and dot-separated, `<name>.<layer>.js` (`private.auth.middleware.js`, `routes.handler.js`). Multi-word names use kebab-case (`odometer-reading.js`, so `odometer-reading.repository.js`).
+- API JSON uses camelCase field names, matching the model attributes.
 - Classes use PascalCase; variables and functions use camelCase.
 
 ## Code style

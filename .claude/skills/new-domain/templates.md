@@ -1,66 +1,17 @@
 # Layer templates
 
-No domain code exists yet. These templates follow the conventions in `.claude/rules/` and use **fleet** (RF04) as the example. Lines marked *Proposed* depend on conventions that are still open. Once the first domain is merged, replace this file with pointers to its real files.
+These templates follow the conventions in `.claude/rules/` and use **fleet** as the example. Lines marked *Proposed* depend on a convention that's still open. Once the first domain is merged, replace this file with pointers to its real files.
 
-## SQL (`data/db.sql`)
+## Schema and model
 
-```sql
-CREATE TABLE `fleets` (
-	`id` INT(11) NOT NULL AUTO_INCREMENT,
-	`name` VARCHAR(128) NOT NULL,
-	`base` VARCHAR(128) NOT NULL,
-	`region` VARCHAR(128) NOT NULL,
-	`status` ENUM('active','inactive') NOT NULL DEFAULT 'active',
-	`created_at` BIGINT(20) NULL DEFAULT (unix_timestamp() * 1000),
-	`updated_at` BIGINT(20) NULL DEFAULT (unix_timestamp() * 1000),
-	PRIMARY KEY (`id`) USING BTREE
-)
-COLLATE='utf8mb4_general_ci'
-ENGINE=InnoDB
-;
-```
-
-## Model (`src/app/database/models/fleet.js`)
-
-```js
-const { DataTypes } = require('sequelize')
-const connection = require('..')
-
-const Fleet = connection.define('Fleet', {
-    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    name: { type: DataTypes.STRING(128), allowNull: false },
-    base: { type: DataTypes.STRING(128), allowNull: false },
-    region: { type: DataTypes.STRING(128), allowNull: false },
-    status: { type: DataTypes.ENUM('active', 'inactive'), allowNull: false, defaultValue: 'active' },
-    created_at: { type: DataTypes.BIGINT },
-    updated_at: { type: DataTypes.BIGINT }
-}, {
-    tableName: 'fleets',
-    // Proposed: keep the BIGINT unix-ms columns and fill them in hooks.
-    timestamps: false,
-    hooks: {
-        beforeCreate: (fleet) => { fleet.created_at = fleet.updated_at = Date.now() },
-        beforeUpdate: (fleet) => { fleet.updated_at = Date.now() }
-    }
-})
-
-module.exports = Fleet
-```
-
-Associations go in `models/associations.js`:
-
-```js
-const Fleet = require('./fleet')
-const Vehicle = require('./vehicle')
-
-Fleet.hasMany(Vehicle, { foreignKey: 'fleet_id', as: 'vehicles' })
-Vehicle.belongsTo(Fleet, { foreignKey: 'fleet_id', as: 'fleet' })
-```
+All 11 tables and models already exist; see `.claude/docs/data-model.md`.
+- **Real references:** `data/db.sql` (the `fleets` table), `src/app/database/models/fleet.js` and `models/associations.js`.
+- **New table:** follow the same pattern. Add the model to `models/index.js`, its associations to `associations.js`, and the entity to `docs/der/der.mmd`, then regenerate the image.
 
 ## Repository (`src/app/repositories/fleet.repository.js`)
 
 ```js
-const Fleet = require('../database/models/fleet')
+const { Fleet } = require('../database/models')
 
 class FleetRepository {
     async create(data, options = {}) {
@@ -101,7 +52,7 @@ class FleetService {
 module.exports = new FleetService()
 ```
 
-For multi-step writes, use `connection.transaction(...)` (`const connection = require('../database')`). In a managed transaction, returning an error object **commits**. Throw to roll back, or use an unmanaged transaction and call `rollback()` before you return the error.
+For multi-step writes, use `connection.transaction(...)` (`const connection = require('../database')`). Pass `{ transaction, lock: true }` when reading a row you're about to update under RN06/RN07. In a managed transaction, returning an error object **commits**. Throw to roll back, or use an unmanaged transaction and call `rollback()` before you return the error.
 
 ## Controller (`src/app/controllers/fleet.controller.js`)
 
@@ -113,8 +64,8 @@ class FleetController {
     constructor() {
         this.createSchema = z.object({
             name: z.string({ error: 'Informe o nome da frota.' }).trim().min(1, 'Informe o nome da frota.'),
-            base: z.string({ error: 'Informe a base da frota.' }).trim().min(1, 'Informe a base da frota.'),
-            region: z.string({ error: 'Informe a região da frota.' }).trim().min(1, 'Informe a região da frota.')
+            baseRegion: z.string({ error: 'Informe a base ou região.' }).trim().min(1, 'Informe a base ou região.'),
+            description: z.string().trim().max(255, 'A descrição deve ter até 255 caracteres.').optional()
         })
     }
 
@@ -157,11 +108,11 @@ const router = express.Router()
  *         application/json:
  *           schema:
  *             type: object
- *             required: [name, base, region]
+ *             required: [name, baseRegion]
  *             properties:
  *               name: { type: string }
- *               base: { type: string }
- *               region: { type: string }
+ *               baseRegion: { type: string }
+ *               description: { type: string }
  *     responses:
  *       201:
  *         description: Fleet created

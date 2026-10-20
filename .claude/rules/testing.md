@@ -48,7 +48,7 @@ describe('POST /fleets', () => {
         const response = await request(global.app)
             .post('/fleets')
             .set('Authorization', `Bearer ${token}`)
-            .send({ name: `Fleet ${Date.now()}`, base: 'Patos de Minas', region: 'MG' })
+            .send({ name: `Fleet ${Date.now()}`, baseRegion: 'Patos de Minas, MG' })
 
         expect(response.status).toBe(201)
         expect(response.body.error).toBe(false)
@@ -59,7 +59,7 @@ describe('POST /fleets', () => {
         const response = await request(global.app)
             .post('/fleets')
             .set('Authorization', `Bearer ${token}`)
-            .send({ base: 'Patos de Minas', region: 'MG' })
+            .send({ baseRegion: 'Patos de Minas, MG' })
 
         expect(response.status).toBe(400)
         expect(response.body.id).toBe('invalid_schema')

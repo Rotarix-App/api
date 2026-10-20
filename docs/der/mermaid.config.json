@@ -1,0 +1,16 @@
+{
+  "layout": "elk",
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "Arial, Helvetica, sans-serif",
+    "fontSize": "15px",
+    "primaryColor": "#E1EEE9",
+    "primaryBorderColor": "#0F5B4B",
+    "primaryTextColor": "#1B1F1C",
+    "lineColor": "#5B605A",
+    "textColor": "#1B1F1C",
+    "attributeBackgroundColorOdd": "#FFFFFF",
+    "attributeBackgroundColorEven": "#F6F4EF"
+  },
+  "er": { "useMaxWidth": false }
+}
