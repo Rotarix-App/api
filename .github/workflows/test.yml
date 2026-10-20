@@ -45,15 +45,11 @@ jobs:
             sleep 2
           done
 
-      - name: Execute db.sql
-        run: |
-          mysql -h 127.0.0.1 -u root -proot rotarix < data/db.sql
-
       - name: Run tests
         env:
-          MYSQL_HOST: localhost
+          MYSQL_HOST: 127.0.0.1
           MYSQL_PORT: 3306
-          MYSQL_DATABASE: rotarix
+          MYSQL_DATABASE: rotarix_test
           MYSQL_USERNAME: root
           MYSQL_PASSWORD: root
           JWT_SECRET: test_jwt_secret
