@@ -2,7 +2,7 @@
 
 The physical schema, derived from what the prototype shows and collects (`prototype.md`, D09), plus basic control fields. Written 2026-10-20.
 
-- **Status:** the models and `data/db.sql` exist; the schema has never been run against a database.
+- **Status:** the models and `data/db.sql` exist. Test-database execution was recorded on 2026-10-20; the user confirmed the existing MySQL database and Fleet model during Fleet planning. Fleet implementation reuses them without structural changes (D28).
 - **Approval:** the schema is a proposal until the user approves it. The assumptions are listed [at the end](#assumptions-to-confirm).
 
 | Artifact | Path |
@@ -216,9 +216,12 @@ The prototype shows these alerts but has no screen to configure them.
 | vehicles | service_reminders | 1 – N | service_reminders.vehicle_id |
 | maintenances | service_reminders | 0..1 – N | service_reminders.completed_maintenance_id |
 
+## Confirmed access scope
+
+**P07 resolved → D27 (2026-10-30):** the current version operates under one company; all authorized managers share access to company fleets. Reuse the existing schema without `companies`, ownership columns or manager-to-fleet assignments. Review authorization and existing-data migration before any future company isolation. Visibility of self-registered drivers (P06) remains a separate decision.
+
 ## Assumptions to confirm
 
-- **P07: one company.** No `companies` table: every manager sees every fleet, and a self-registered driver shows up in the managers' driver list (which also answers the rest of P06). The prototype never collects company data. If the answer turns out to be multi-company, add `companies` plus `company_id` on `users` and `fleets`; it's an additive change.
 - **P17 and P18:** refuelings and maintenances are separate tables, so how they count in the spend categories is a reporting rule that can change without touching the schema.
 - **P09:** `service_reminders` is a proposal.
 - **Timestamps:** `DATETIME` columns managed by Sequelize replace the BIGINT unix-ms template that was in the scaffold's `db.sql`.

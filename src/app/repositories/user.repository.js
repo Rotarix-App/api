@@ -1,8 +1,28 @@
 const crypto = require('crypto')
-const { User } = require('../database/models')
+const { User, Vehicle, Trip } = require('../database/models')
 const utils = require('../utils')
 
 class UserRepository {
+    /**
+     * @param {number} fleetId
+     * @param {object} options
+     */
+    async findDriversByFleetId(fleetId, options = {}) {
+        const drivers = await User.findAll({
+            attributes: ['id', 'name', 'cnhCategory', 'status'],
+            where: { role: 'driver' },
+            include: [
+                { model: Vehicle, as: 'assignedVehicles', attributes: ['id'], where: { fleetId }, through: { attributes: [] } },
+                { model: Trip, as: 'trips', attributes: ['id'], where: { status: 'in_progress' }, required: false }
+            ],
+            order: [['name', 'ASC'], ['id', 'ASC']],
+            ...options
+        }).catch(utils.logError)
+        if (drivers === undefined) return utils.error(500, 'internal_server_error', 'Não foi possível consultar os motoristas.')
+
+        return drivers
+    }
+
     /**
      * @param {number} id
      * @param {{ withPassword?: boolean, transaction?: import('sequelize').Transaction }} options

@@ -28,6 +28,76 @@ const options = {
                 },
             },
             schemas: {
+                FleetInput: {
+                    type: 'object',
+                    required: ['name', 'baseRegion'],
+                    properties: {
+                        name: { type: 'string', minLength: 1, maxLength: 100 },
+                        baseRegion: { type: 'string', minLength: 1, maxLength: 120 },
+                        description: { type: 'string', nullable: true, maxLength: 255 },
+                    },
+                },
+                Fleet: {
+                    allOf: [
+                        { $ref: '#/components/schemas/FleetInput' },
+                        {
+                            type: 'object',
+                            properties: {
+                                id: { type: 'integer' },
+                                status: { type: 'string', enum: ['active', 'inactive'] },
+                                createdAt: { type: 'string', format: 'date-time' },
+                                updatedAt: { type: 'string', format: 'date-time' },
+                            },
+                        },
+                    ],
+                },
+                FleetCard: {
+                    allOf: [
+                        { $ref: '#/components/schemas/Fleet' },
+                        {
+                            type: 'object',
+                            properties: {
+                                vehicleCount: { type: 'integer', minimum: 0 },
+                                driverCount: { type: 'integer', minimum: 0 },
+                                onTripCount: { type: 'integer', minimum: 0 },
+                            },
+                        },
+                    ],
+                },
+                FleetDriverSummary: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'integer' },
+                        name: { type: 'string' },
+                    },
+                },
+                FleetDriver: {
+                    allOf: [
+                        { $ref: '#/components/schemas/FleetDriverSummary' },
+                        {
+                            type: 'object',
+                            properties: {
+                                cnhCategory: { type: 'string', enum: ['B', 'C', 'D', 'E'], nullable: true },
+                                status: { type: 'string', enum: ['active', 'inactive'] },
+                                tripStatus: { type: 'string', enum: ['free', 'in_progress'] },
+                            },
+                        },
+                    ],
+                },
+                FleetVehicle: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'integer' },
+                        plate: { type: 'string' },
+                        brand: { type: 'string' },
+                        model: { type: 'string' },
+                        year: { type: 'integer' },
+                        currentOdometer: { type: 'integer' },
+                        status: { type: 'string', enum: ['active', 'inactive'] },
+                        tripStatus: { type: 'string', enum: ['free', 'in_progress'] },
+                        assignedDrivers: { type: 'array', items: { $ref: '#/components/schemas/FleetDriverSummary' } },
+                    },
+                },
                 User: {
                     type: 'object',
                     properties: {

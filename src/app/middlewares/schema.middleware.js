@@ -1,7 +1,7 @@
 const express = require('express')
 const { ZodError } = require('zod')
 
-module.exports = (bodySchema, querySchema) => {
+module.exports = (bodySchema, querySchema, paramsSchema, { stringQueryFields = [] } = {}) => {
     /**
      *
      * @param {express.Request} req
@@ -12,7 +12,8 @@ module.exports = (bodySchema, querySchema) => {
         try {
             const query = {}
             for (const param in req.query) {
-                query[param] = isNaN(req.query[param]) ? req.query[param] : Number(req.query[param])
+                const value = req.query[param]
+                query[param] = stringQueryFields.includes(param) || typeof value !== 'string' || isNaN(value) ? value : Number(value)
             }
 
             if (bodySchema) {
@@ -26,6 +27,10 @@ module.exports = (bodySchema, querySchema) => {
                     enumerable: true,
                     configurable: true
                 })
+            }
+
+            if (paramsSchema) {
+                req.params = paramsSchema.parse(req.params)
             }
 
             next()

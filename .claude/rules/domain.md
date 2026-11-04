@@ -33,7 +33,7 @@ Each user has exactly one role, chosen at sign-up and never changed: **manager**
 | Record expenses, refueling and maintenance | — | on assigned vehicles, with or without a trip | D18, D19, RN03 |
 | Edit and delete expenses | — | own expenses | D21 (limits: P21) |
 
-Which fleets a manager is responsible for, and whether companies are isolated from each other, is still undefined (P07).
+All active authenticated managers share access to all company fleets in the current single-company version (D27, resolves P07). Fleet access has no creator/manager ownership filter. Do not add multi-tenancy or database structures for Fleet. Driver permissions remain governed by RN03. Review D27 before supporting independent companies or restricting manager scopes.
 
 ## Business rules
 
@@ -114,7 +114,7 @@ Summary only. The physical schema (tables, columns, constraints) is in `.claude/
 | Odometer reading | every reading of a vehicle (manual, trip start or end, refueling, maintenance) with its photo; the source of RN07 |
 | Service reminder | a vehicle's next service by km ("Revisão", "Troca de óleo"); a proposal (P09) |
 
-The data model applies these as proposals awaiting approval: one company (P07), and refueling and maintenance as separate tables (P17, P18).
+Single-company Fleet access is confirmed (D27). Refueling and maintenance as separate tables remain proposals awaiting approval (P17, P18).
 
 ## Glossary (pt-BR → English)
 

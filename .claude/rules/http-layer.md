@@ -44,7 +44,7 @@ The reference implementation is `auth.routes.js`, `user.routes.js`, `auth.contro
 |---|---|
 | `auth.middleware.js` | Requires `Authorization: Bearer <JWT>` and reloads the user on every request. Missing, invalid or expired token, or a deleted user: 401 `unauthorized`. Inactive user: 403 `account_inactive` (D24). On success it sets `req.user` (a Sequelize instance whose `toJSON` hides `passwordHash`). |
 | `role.middleware.js` | `roleMiddleware('manager')` or `roleMiddleware('manager', 'driver')`. Goes after `AuthMiddleware` and returns 403 `forbidden` for other roles (RN02). |
-| `schema.middleware.js` | `SchemaParserMiddleware(bodySchema, querySchema)`. Converts numeric-looking query values to numbers, parses with Zod and writes the parsed values back to `req.body` and `req.query`. Answers 400 `invalid_schema` with `data.errors`. Errors that aren't from Zod go to `next(err)`. |
+| `schema.middleware.js` | `SchemaParserMiddleware(bodySchema, querySchema, paramsSchema, { stringQueryFields })`. Optional parameter validation writes parsed values to `req.params`. Scalar numeric-looking query values are converted to numbers except fields explicitly listed in `stringQueryFields`; Fleet preserves `search` and `status` as text. Arrays/objects stay intact for Zod to reject. Writes parsed body/query values back, answers 400 `invalid_schema` with `data.errors`, and forwards non-Zod errors to `next(err)`. Existing two-argument calls remain supported. |
 | `logger.middleware.js` | Logs IP, method, URL, body and query, with password fields replaced by `***`. Off in tests. |
 | `private.auth.middleware.js` | Lets only 127.0.0.1 and ::1 through, for internal routes. It isn't user authentication: behind a reverse proxy on the same host, every request passes. |
 

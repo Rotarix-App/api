@@ -19,7 +19,7 @@ This is an analysis. It doesn't change the sources, which stay verbatim in Portu
 | Area | Prototype | Official sections | Open questions |
 |---|---|---|---|
 | Accounts and profile | S01–S03, S19–S20, S36–S37, M14–M17 | RF01–RF03, UC01, RN01, RNF02 | P06, P14, P20 |
-| Fleets | S06–S08, M01–M03 | RF04, UC02, RN02, RN05 | P07, P20 |
+| Fleets | S06–S08, M01–M03 | RF04, UC02, RN02, RN05 | P07 resolved by D27; P20 (Fleet API approved by D28, UI still pending) |
 | Vehicles | S09–S10, S23–S24, M04–M06 | RF05, RF09, UC03, RN03–RN05 | P09, P20 |
 | Drivers and assignments | S11–S14, M07–M09 | RF06, RF07, UC04, RN02–RN03 | P06, P07, P12 |
 | Trips and mileage | S21–S22, S25–S30, M12–M13, M18 | RF10, RF13, UC06, RN06–RN08 | P12 |
@@ -118,7 +118,7 @@ Comparison done on 2026-10-20 between the official sources (the PDFs and the mar
 
 ### Still unanswered
 
-See P06, P07, P09–P12, P14–P22 below.
+See P06, P09–P12, P14–P22 below. P07 is resolved by D27.
 
 ## Open questions
 
@@ -131,8 +131,8 @@ P stands for *pending*. When the user answers one, record the answer and its dat
 | P03 | The official matrix maps RF06→UC03, RF08→UC04, RF10/RF13→UC05; the text points to UC04, UC05, UC06. | Approving a corrected matrix | Open (documentation only) |
 | P04 | PI mentions location tracking and communication; no RF covers them. | Scope | **Resolved → D17** (out of scope) |
 | P05 | RF03 is ambiguous about read-only fields; RF06 lets managers edit driver data. | Who edits CNH | **Resolved → D15** |
-| P06 | RF01 lets drivers sign up; RF06 lets managers register them. | Account creation flow | **Partly → D14.** Still open: how a self-registered driver becomes visible to a manager and gets assigned (tied to P07). |
-| P07 | Fleets "under the manager's responsibility"; no ownership or isolation defined. | Access between managers; separation per company | Open. M15 hints at company-owned fleets ("frotas e veículos da empresa"). The data model assumes **one company** for now (`data-model.md`); adding companies later is an additive change. |
+| P06 | RF01 lets drivers sign up; RF06 lets managers register them. | Account creation flow | **Partly → D14.** Still open: how a self-registered driver becomes visible to a manager and gets assigned. P07 is now resolved for Fleet by D27; driver visibility was not included in that decision. |
+| P07 | Fleets "under the manager's responsibility"; ownership/isolation was undefined. | Access between managers; separation per company | **Resolved → D27 (2026-10-30).** Current version: one company, shared Fleet access for all authorized managers, no ownership filters or multi-tenancy/schema changes. Review before independent companies or restricted manager scopes. P06 remains separate. |
 | P08 | RF08 says "the user"; UC05 points to the manager. | Who sees metrics, and which ones | **Resolved → D16** |
 | P09 | UC08/RN08 require maintenance with photos; RF05 requires service alerts. | Alert kinds, intervals and where they're configured | Open. The prototype shows "Revisão em X km", "Troca de óleo vencida há X km" and "Próxima revisão aos X km", but has no configuration screen. The data model proposes a `service_reminders` table. |
 | P10 | RF12 attachments; UC07 "when necessary"; RN08 odometer photo. | Which receipts are required; formats, sizes, retention, storage | **Partly → D26** (invoice optional for refueling and maintenance). Open: receipt on a plain expense (S32); formats and storage. |
