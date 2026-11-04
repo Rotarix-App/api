@@ -31,7 +31,7 @@ class VehicleAssignmentRepository {
         if (!vehicleIds.length) return true
 
         const result = await VehicleAssignment.destroy({ where: { vehicleId: { [Op.in]: vehicleIds } }, ...options }).catch(utils.logError)
-        if (result === undefined) return utils.error(500, 'internal_server_error', 'Não foi possível remover as atribuições da frota.')
+        if (result === undefined) return utils.error(500, 'internal_server_error', 'Não foi possível remover as atribuições dos veículos.')
 
         return true
     }

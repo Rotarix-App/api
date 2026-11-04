@@ -2,6 +2,7 @@ const { z } = require('zod')
 
 const NAME_PATTERN = /^[A-Za-zÀ-ÿ'’-]+(?:\s+[A-Za-zÀ-ÿ'’-]+)+$/
 const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/
+const PLATE_PATTERN = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/
 
 module.exports = {
     id: z
@@ -42,5 +43,22 @@ module.exports = {
         .trim()
         .regex(/^\d{11}$/, 'O número da CNH deve ter 11 dígitos.'),
 
-    cnhCategory: z.enum(['B', 'C', 'D', 'E'], { error: 'Escolha a categoria da CNH: B, C, D ou E.' })
+    cnhCategory: z.enum(['B', 'C', 'D', 'E'], { error: 'Escolha a categoria da CNH: B, C, D ou E.' }),
+
+    plate: z
+        .string({ error: 'Informe a placa.' })
+        .transform((value) => value.replace(/[\s-]/g, '').toUpperCase())
+        .pipe(z.string().regex(PLATE_PATTERN, 'Informe uma placa válida, como ABC1D23 ou ABC1234.')),
+
+    vehicleYear: z
+        .number({ error: 'Informe o ano do veículo.' })
+        .int('Informe o ano do veículo.')
+        .min(1950, 'Informe um ano a partir de 1950.')
+        .refine((year) => year <= new Date().getFullYear() + 1, 'O ano não pode ser posterior ao próximo ano.'),
+
+    odometer: z
+        .number({ error: 'Informe o odômetro em km.' })
+        .int('O odômetro deve ser em km inteiros.')
+        .min(0, 'O odômetro não pode ser negativo.')
+        .max(9999999, 'O odômetro deve ter no máximo 9.999.999 km.')
 }

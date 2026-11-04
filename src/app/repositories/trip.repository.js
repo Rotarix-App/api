@@ -1,5 +1,5 @@
 const { Op, fn, col } = require('sequelize')
-const { Trip, Vehicle } = require('../database/models')
+const { Trip, Vehicle, User } = require('../database/models')
 const utils = require('../utils')
 
 class TripRepository {
@@ -19,6 +19,42 @@ class TripRepository {
         if (rows === undefined) return utils.error(500, 'internal_server_error', 'Não foi possível contar as viagens em andamento.')
 
         return rows
+    }
+
+    /**
+     * @param {number} vehicleId
+     * @param {object} options
+     */
+    async findInProgressByVehicleId(vehicleId, options = {}) {
+        const trip = await Trip.findOne({
+            attributes: ['id', 'startedAt'],
+            where: { vehicleId, status: 'in_progress' },
+            include: [
+                {
+                    model: User,
+                    as: 'driver',
+                    attributes: ['id', 'name'],
+                    paranoid: false
+                }
+            ],
+            ...options
+        }).catch(utils.logError)
+        if (trip === undefined) return utils.error(500, 'internal_server_error', 'Não foi possível consultar as viagens.')
+
+        return trip
+    }
+
+    /**
+     * @param {number[]} vehicleIds
+     * @param {object} options
+     */
+    async countInProgressByVehicleIds(vehicleIds, options = {}) {
+        if (!vehicleIds.length) return 0
+
+        const count = await Trip.count({ where: { vehicleId: { [Op.in]: vehicleIds }, status: 'in_progress' }, ...options }).catch(utils.logError)
+        if (count === undefined) return utils.error(500, 'internal_server_error', 'Não foi possível consultar as viagens.')
+
+        return count
     }
 
     /**

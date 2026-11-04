@@ -7,7 +7,8 @@ class CustomSequencer extends Sequencer {
     const order = [
       "auth.test.js",
       "users.test.js",
-      "fleets.test.js"
+      "fleets.test.js",
+      "vehicles.test.js"
     ];
 
     return [...tests].sort((a, b) => {

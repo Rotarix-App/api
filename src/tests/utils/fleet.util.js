@@ -1,6 +1,15 @@
-const { randomUUID } = require('crypto')
+const { randomUUID, randomInt } = require('crypto')
 const { Fleet, Vehicle, VehicleAssignment, OdometerReading, Trip } = require('../../app/database/models')
 const { createTestUser } = require('./user.util')
+
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+function randomPlate() {
+    const letter = () => LETTERS[randomInt(LETTERS.length)]
+    const digit = () => String(randomInt(10))
+
+    return `${letter()}${letter()}${letter()}${digit()}${letter()}${digit()}${digit()}`
+}
 
 /**
  * @param {number} managerId
@@ -16,7 +25,11 @@ async function createFleet(managerId, overrides = {}) {
  */
 async function createVehicle(fleetId, overrides = {}) {
     return Vehicle.create({
-        fleetId, plate: randomUUID().replace(/-/g, '').slice(0, 7).toUpperCase(), brand: 'Scania', model: 'R450', year: 2022,
+        fleetId,
+        plate: randomPlate(),
+        brand: 'Scania',
+        model: 'R450',
+        year: 2022,
         ...overrides
     })
 }
@@ -39,4 +52,11 @@ async function createLinkedFleet(managerId, overrides = {}) {
     return { fleet, vehicle, driver, trip, reading }
 }
 
-module.exports = { createFleet, createVehicle, createLinkedFleet }
+/**
+ * @param {object} trip
+ */
+async function finishTrip(trip) {
+    return trip.update({ status: 'finished', endedAt: new Date() })
+}
+
+module.exports = { randomPlate, createFleet, createVehicle, createLinkedFleet, finishTrip }

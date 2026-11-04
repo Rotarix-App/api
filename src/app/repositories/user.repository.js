@@ -24,6 +24,38 @@ class UserRepository {
     }
 
     /**
+     * @param {number} vehicleId
+     * @param {object} options
+     */
+    async findDriversByVehicleId(vehicleId, options = {}) {
+        const drivers = await User.findAll({
+            attributes: ['id', 'name', 'cnhCategory'],
+            where: { role: 'driver' },
+            include: [
+                {
+                    model: Vehicle,
+                    as: 'assignedVehicles',
+                    attributes: [],
+                    where: { id: vehicleId },
+                    through: { attributes: [] }
+                },
+                {
+                    model: Trip,
+                    as: 'trips',
+                    attributes: ['id'],
+                    where: { status: 'in_progress' },
+                    required: false
+                }
+            ],
+            order: [['name', 'ASC'], ['id', 'ASC']],
+            ...options
+        }).catch(utils.logError)
+        if (drivers === undefined) return utils.error(500, 'internal_server_error', 'Não foi possível consultar os motoristas do veículo.')
+
+        return drivers
+    }
+
+    /**
      * @param {number} id
      * @param {{ withPassword?: boolean, transaction?: import('sequelize').Transaction }} options
      */
