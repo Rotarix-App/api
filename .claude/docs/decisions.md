@@ -16,29 +16,6 @@ Started 2026-10-18. Every entry here is either stated in the official sources, c
 | — | 2026-10-20 | A driver's fleet is **derived from their vehicle assignments** (`vehicle_assignments → vehicles.fleet_id`), not stored: `users` has no `fleet_id`. "One driver, one fleet" (D13) is a rule the service enforces when assignments are saved. |
 | **D09** | 2026-10-20 | **The Figma prototype "Rotarix — Protótipo Mobile" (v1.0, 2026-09-26) is the source of truth for functionality**: screens, flows, fields and behavior. Where the official documents diverge, follow the prototype. The official documents still govern non-functional requirements and any rule the prototype doesn't contradict. See [`prototype.md`](prototype.md). |
 
-### Fleet approval and access scope
-
-| ID | Date | Decision | Confirmed by | Resolves |
-|---|---|---|---|---|
-| D27 | 2026-10-30 | The current version operates as a single company. All active authenticated managers share access to all company fleets and may perform the Fleet operations allowed by RF04/RN02, regardless of creator. No multi-tenancy or schema changes are required. Shared Fleet access was first confirmed on 2026-10-28 and clarified on 2026-10-30. | user | P07 |
-| D28 | 2026-10-30 | Implement the Fleet plan approved in this conversation: CRUD, search/filter, distinct counts, status changes, exact-name deletion confirmation, transactional assignment cleanup and read-only vehicle/driver lists. Reuse existing models, schema and architecture. Financial metrics and implementation of other modules are excluded. Follow documented verification against the test database; never reset the main database. | user | Fleet implementation approval; Fleet API reactivation under P20 |
-
-Future review for D27: reconsider this policy before independent companies, restricted manager responsibilities or changes to manager onboarding. The current registration flow lets users choose the manager role; D27 grants each active manager account access to every fleet, including edit, deactivation and typed-confirmation deletion. Verify cross-manager access and driver denial in acceptance tests. Future company isolation requires an approved authorization design, allocation of existing data and a migration plan, rather than simply adding a company column. P06 (visibility of self-registered drivers) is not resolved by this Fleet-only approval.
-
-Approved Fleet contract details (D28): omitted status filter means `all`; name searches use literal substrings, including numeric names and `%`/`_`; counts exclude soft-deleted vehicles/users and count drivers distinctly. `onTripCount` counts currently linked non-deleted vehicles with an ongoing trip. Mutation responses return persisted Fleet fields; list/detail add counts. Status changes are idempotent. Deletion compares the exact current stored name, case and spaces included, under a Fleet row lock. Vehicle rows return all assigned driver summaries rather than choosing one arbitrarily. Relationship writes in future modules must lock Fleet first, then affected vehicles in deterministic ID order; trip start must recheck Fleet status under a compatible lock. This approval does not implement those future writers or resolve P12/P17.
-
-### Local test infrastructure
-
-| ID | Date | Decision | Confirmed by | Resolves |
-|---|---|---|---|---|
-| D29 | 2026-11-02 | Repair local test execution by reusing Rotarix's existing Docker configuration, credentials, MySQL 8, Jest and test setup. An isolated test instance is allowed when needed. Preserve development data/volumes, schema, models, relationships, business logic and tests; avoid parallel configuration files, credential changes and new dependencies. Validate the connection and full suite, and document results. **The second-container implementation is superseded by D30.** | user | Historical local test environment authorization |
-| D30 | 2026-11-03 | Use only the existing `mysql-container` at `localhost:3306`: local `npm start` uses the development database through `.env`, and local `npm run test` uses exactly `rotarix_test` through `.env.test`. Correct environment files to the existing server's actual credentials without changing accounts or passwords. Remove obsolete test infrastructure only after confirming it is disposable and unnecessary. Preserve the shared container/volumes, existing development data, schema definitions, models, relationships, business logic and test cases. Stop for approval before operations that could affect development data. | user | Supersedes D29's separate MySQL service/port |
-| D31 | 2026-11-03 | The existing server has no `rotarix` database. Create only that missing development database and its tables from the existing `data/db.sql` definitions, omitting all DROP statements and preserving every other database and volume. | user, explicit response to the provisioning question | Initial development database provisioning |
-
-Historical D29 implementation: a second MySQL service with disposable data and alternate port was verified, then rejected by the user in favor of the existing instance (D30). Its profile/anchors were removed, the repository Compose file was restored, and only the confirmed disposable test container was removed, without removing volumes. Do not reinstate this workflow.
-
-Current D30 implementation: `.env` is local and ignored by Git; `.env.test` selects `rotarix_test`; both connect to the existing instance using its actual credentials. Package scripts and Jest timeout are unchanged. The setup's destructive target guard now accepts exactly `rotarix_test`, rejecting all other names before opening a database connection. The existing container remains managed by its original Compose project; do not recreate it through this checkout's legacy Compose definition. See [`../rules/testing.md`](../rules/testing.md).
-
 ## From the official sources
 
 | ID | Decision | Source |
@@ -78,19 +55,27 @@ Screen references (Sxx and Mxx) are explained in [`prototype.md`](prototype.md).
 
 ## Technical evidence, not decisions
 
-The repository uses Node.js/CommonJS, Express 5, Sequelize, Zod, JWT/bcryptjs and Jest/Supertest, with the layered architecture described in `.claude/rules/architecture.md`. These came from the initial scaffolding. Implementation and verification status are recorded in [`progress.md`](progress.md).
+The repository uses Node.js/CommonJS, Express 5, Sequelize, Zod, JWT/bcryptjs and Jest/Supertest, with the layered architecture described in `.claude/rules/architecture.md`. These came from the initial scaffolding. Only the auth and users module is implemented. See [`progress.md`](progress.md).
 
 ## Not approved yet
 
 - The development plan in [`progress.md`](progress.md), and the validation criteria in [`requirements-analysis.md`](requirements-analysis.md).
 - No choice yet on hosting, image storage or how service alerts are configured (P09).
 - **Physical schema** ([`data-model.md`](data-model.md), written 2026-10-20 at the user's request): the models and `data/db.sql` exist, but the schema awaits approval. These are applied as proposals:
-  - single-company Fleet access is now confirmed by D27; other outstanding schema proposals remain unapproved;
+  - a single company (P07);
   - separate tables for refuelings and maintenances (P17, P18);
   - `service_reminders` (P09);
   - Sequelize `DATETIME` timestamps instead of the BIGINT template;
   - camelCase attributes mapped to snake_case columns;
   - kebab-case for multi-word file names.
+- **Choices made while building fleets** (`Frotas` branch, applied; review them):
+  - Routes: `POST` and `GET /fleets`; `GET`, `PUT` and `DELETE /fleets/:id`; `PATCH /fleets/:id/status` (deactivate and reactivate, idempotent); `GET /fleets/:id/vehicles` and `/fleets/:id/drivers`. All manager-only.
+  - Every active manager can act on every fleet (the P07 assumption, not a decision).
+  - The list filter defaults to `all`. The name search is a literal, case-insensitive substring.
+  - Counts exclude soft-deleted vehicles and users, and count drivers once per fleet. `onTripCount` counts vehicles with a trip in progress.
+  - Deleting needs `confirmationName` equal to the stored name, case and spaces included (`400 fleet_name_confirmation_mismatch`). It locks the fleet row, deletes the assignments of all its vehicles (soft-deleted ones too), then deletes the fleet; the FK sets `vehicles.fleet_id` to NULL.
+  - Vehicle rows return every assigned driver (`assignedDrivers`) plus the driver of the trip in progress (`tripDriver`), which S08 shows.
+  - `SchemaParserMiddleware` takes a third argument for path params and a `stringQueryFields` option that keeps numeric-looking query values (a search for "00123") as text.
 - **Choices made while building auth and users** (applied; review them):
   - Error objects carry `httpStatus` (`utils.error`), and controllers send them with `utils.sendError`.
   - Routes: `POST /register` and `POST /login` (both return `{ token, user }`); `GET`, `PUT` and `DELETE /users/@me`; `PUT /users/@me/password`.
@@ -109,6 +94,6 @@ When the user answers an open question (see [`requirements-analysis.md`](require
 
 | ID | Date | Decision | Confirmed by | Resolves |
 |---|---|---|---|---|
-| D32 | YYYY-MM-DD | … | user | Pxx |
+| D27 | YYYY-MM-DD | … | user | Pxx |
 
 Then update the rules and docs it affects, and set the question's status to **Resolved → Dxx**. If the prototype changes, update [`prototype.md`](prototype.md) and review D10–D26.

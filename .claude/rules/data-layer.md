@@ -76,7 +76,7 @@ The full schema, with sources and assumptions, is in `.claude/docs/data-model.md
 
 ## SQL schema (`data/db.sql`)
 
-- **Destructive.** The script starts with `DROP DATABASE IF EXISTS rotarix`. Never run it against a database that has data without the user's explicit authorization. The test setup rewrites its database statements and accepts only the exact database name `rotarix_test` before connecting (see `testing.md`). Never reset the development database.
+- **Destructive.** The script starts with `DROP DATABASE IF EXISTS rotarix`. Never run it against a database that has data without the user's explicit authorization. The test setup runs it automatically, but only against the database named exactly `rotarix_test` (see `testing.md`).
 - Table conventions:
   - plural snake_case table names and an `id INT(11) NOT NULL AUTO_INCREMENT` primary key;
   - `created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP` and `updated_at ... ON UPDATE CURRENT_TIMESTAMP`;
