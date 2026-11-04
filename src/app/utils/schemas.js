@@ -4,6 +4,12 @@ const NAME_PATTERN = /^[A-Za-zÀ-ÿ'’-]+(?:\s+[A-Za-zÀ-ÿ'’-]+)+$/
 const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/
 
 module.exports = {
+    id: z
+        .string({ error: 'Informe um identificador válido.' })
+        .regex(/^[1-9][0-9]{0,9}$/, 'Informe um identificador válido.')
+        .transform(Number)
+        .pipe(z.number().max(2147483647, 'Informe um identificador válido.')),
+
     role: z.enum(['manager', 'driver'], { error: 'Escolha o perfil: gestor ou motorista.' }),
 
     name: z

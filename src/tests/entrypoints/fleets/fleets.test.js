@@ -222,7 +222,11 @@ describe('GET /fleets/:id and relationship lists', () => {
             const vehicles = await call('get', `/fleets/${fleet.id}/vehicles`)
             expect(vehicles.status).toBe(200)
             expect(vehicles.body.data).toHaveLength(2)
-            expect(vehicles.body.data.find(row => row.id === vehicle.id)).toMatchObject({ tripStatus: 'in_progress' })
+            expect(vehicles.body.data.find(row => row.id === vehicle.id)).toMatchObject({
+                tripStatus: 'in_progress',
+                tripDriver: { id: assignedDriver.id, name: assignedDriver.name }
+            })
+            expect(vehicles.body.data.find(row => row.id === secondVehicle.id)).toMatchObject({ tripStatus: 'free', tripDriver: null })
             expect(vehicles.body.data.find(row => row.id === vehicle.id).assignedDrivers).toHaveLength(2)
             const drivers = await call('get', `/fleets/${fleet.id}/drivers`)
             expect(drivers.status).toBe(200)
@@ -255,7 +259,7 @@ describe('PUT /fleets/:id', () => {
     })
 
     describe('success', () => {
-        test('Should let another manager view, edit, change status and delete a fleet (D27)', async () => {
+        test('Should let another manager view, edit, change status and delete a fleet (P07 assumption)', async () => {
             const created = await call('post', '/fleets', { name: 'Shared Fleet', baseRegion: 'MG' })
             const id = created.body.data.id
             expect((await call('get', `/fleets/${id}`, undefined, otherManager.token)).status).toBe(200)

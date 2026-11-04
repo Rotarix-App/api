@@ -138,17 +138,22 @@ class FleetService {
         const vehicles = await VehicleRepository.findByFleetId(id)
         if (vehicles.error) return vehicles
 
-        return vehicles.map(vehicle => ({
-            id: vehicle.id,
-            plate: vehicle.plate,
-            brand: vehicle.brand,
-            model: vehicle.model,
-            year: vehicle.year,
-            currentOdometer: vehicle.currentOdometer,
-            status: vehicle.status,
-            tripStatus: vehicle.trips.length ? 'in_progress' : 'free',
-            assignedDrivers: vehicle.assignedDrivers.map(driver => ({ id: driver.id, name: driver.name }))
-        }))
+        return vehicles.map((vehicle) => {
+            const tripDriver = vehicle.trips[0]?.driver
+
+            return {
+                id: vehicle.id,
+                plate: vehicle.plate,
+                brand: vehicle.brand,
+                model: vehicle.model,
+                year: vehicle.year,
+                currentOdometer: vehicle.currentOdometer,
+                status: vehicle.status,
+                tripStatus: vehicle.trips.length ? 'in_progress' : 'free',
+                tripDriver: tripDriver ? { id: tripDriver.id, name: tripDriver.name } : null,
+                assignedDrivers: vehicle.assignedDrivers.map((driver) => ({ id: driver.id, name: driver.name }))
+            }
+        })
     }
 
     /**

@@ -95,6 +95,11 @@ const options = {
                         currentOdometer: { type: 'integer' },
                         status: { type: 'string', enum: ['active', 'inactive'] },
                         tripStatus: { type: 'string', enum: ['free', 'in_progress'] },
+                        tripDriver: {
+                            allOf: [{ $ref: '#/components/schemas/FleetDriverSummary' }],
+                            nullable: true,
+                            description: 'Driver of the trip in progress (S08), or null when the vehicle is free.',
+                        },
                         assignedDrivers: { type: 'array', items: { $ref: '#/components/schemas/FleetDriverSummary' } },
                     },
                 },

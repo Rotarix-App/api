@@ -28,8 +28,28 @@ class VehicleRepository {
         const vehicles = await Vehicle.findAll({
             where: { fleetId },
             include: [
-                { model: User, as: 'assignedDrivers', attributes: ['id', 'name'], where: { role: 'driver' }, through: { attributes: [] }, required: false },
-                { model: Trip, as: 'trips', attributes: ['id'], where: { status: 'in_progress' }, required: false }
+                {
+                    model: User,
+                    as: 'assignedDrivers',
+                    attributes: ['id', 'name'],
+                    where: { role: 'driver' },
+                    through: { attributes: [] },
+                    required: false
+                },
+                {
+                    model: Trip,
+                    as: 'trips',
+                    attributes: ['id'],
+                    where: { status: 'in_progress' },
+                    required: false,
+                    include: [
+                        {
+                            model: User,
+                            as: 'driver',
+                            attributes: ['id', 'name']
+                        }
+                    ]
+                }
             ],
             order: [['plate', 'ASC'], ['assignedDrivers', 'name', 'ASC']],
             ...options
@@ -45,11 +65,15 @@ class VehicleRepository {
      */
     async findIdsByFleetId(fleetId, options = {}) {
         const vehicles = await Vehicle.findAll({
-            attributes: ['id'], where: { fleetId }, paranoid: false, order: [['id', 'ASC']], ...options
+            attributes: ['id'],
+            where: { fleetId },
+            paranoid: false,
+            order: [['id', 'ASC']],
+            ...options
         }).catch(utils.logError)
         if (vehicles === undefined) return utils.error(500, 'internal_server_error', 'Não foi possível consultar os veículos.')
 
-        return vehicles.map(vehicle => vehicle.id)
+        return vehicles.map((vehicle) => vehicle.id)
     }
 }
 
