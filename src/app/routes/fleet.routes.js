@@ -285,7 +285,7 @@ Router.patch('/fleets/:id/status', AuthMiddleware, roleMiddleware('manager'), Sc
  * @swagger
  * /fleets/{id}:
  *   delete:
- *     summary: Delete a fleet keeping vehicles and history
+ *     summary: Delete a fleet and its vehicles, keeping their history
  *     description: Only the manager who created the fleet can access it; other managers get 404.
  *     tags: [Fleets]
  *     security:
@@ -336,6 +336,11 @@ Router.patch('/fleets/:id/status', AuthMiddleware, roleMiddleware('manager'), Sc
  *             schema: { $ref: '#/components/schemas/Error' }
  *       404:
  *         description: fleet_not_found
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       409:
+ *         description: fleet_has_trip_in_progress
  *         content:
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }

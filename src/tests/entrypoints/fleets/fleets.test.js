@@ -2,7 +2,7 @@ const request = require('supertest')
 const { randomUUID } = require('crypto')
 const { Fleet, Vehicle, VehicleAssignment, User, Trip, Expense, Photo, OdometerReading, Refueling, Maintenance } = require('../../../app/database/models')
 const { createTestUser } = require('../../utils/user.util')
-const { createFleet, createVehicle, createLinkedFleet } = require('../../utils/fleet.util')
+const { createFleet, createVehicle, createLinkedFleet, finishTrip } = require('../../utils/fleet.util')
 
 let manager
 let otherManager
@@ -340,15 +340,26 @@ describe('DELETE /fleets/:id', () => {
             expect(await VehicleAssignment.count({ where: { vehicleId: vehicle.id } })).toBe(1)
         })
 
-        test('Should roll back deleted assignments when fleet deletion fails', async () => {
+        test('Should block deletion while a vehicle of the fleet is on a trip', async () => {
             const { fleet, vehicle } = await createLinkedFleet(manager.user.id)
+            const response = await call('delete', `/fleets/${fleet.id}`, { confirmationName: fleet.name })
+            expect(response.status).toBe(409)
+            expect(response.body.id).toBe('fleet_has_trip_in_progress')
+            expect(await Fleet.findByPk(fleet.id)).not.toBeNull()
+            expect(await Vehicle.findByPk(vehicle.id)).not.toBeNull()
+            expect(await VehicleAssignment.count({ where: { vehicleId: vehicle.id } })).toBe(1)
+        })
+
+        test('Should roll back deleted assignments and vehicles when fleet deletion fails', async () => {
+            const { fleet, vehicle, trip } = await createLinkedFleet(manager.user.id)
+            await finishTrip(trip)
             jest.spyOn(console, 'log').mockImplementation(() => {})
             jest.spyOn(Fleet, 'destroy').mockRejectedValueOnce(new Error('Injected deletion failure'))
             const response = await call('delete', `/fleets/${fleet.id}`, { confirmationName: fleet.name })
             expect(response.status).toBe(500)
             expect(response.body.id).toBe('internal_server_error')
             expect(await Fleet.findByPk(fleet.id)).not.toBeNull()
-            expect((await vehicle.reload()).fleetId).toBe(fleet.id)
+            expect(await Vehicle.findByPk(vehicle.id)).toMatchObject({ fleetId: fleet.id })
             expect(await VehicleAssignment.count({ where: { vehicleId: vehicle.id } })).toBe(1)
         })
     })
@@ -362,8 +373,9 @@ describe('DELETE /fleets/:id', () => {
             expect(await Fleet.findByPk(fleet.id)).toBeNull()
         })
 
-        test('Should unlink all vehicles and preserve records including an ongoing trip', async () => {
+        test('Should delete the fleet vehicles and keep their records', async () => {
             const { fleet, vehicle, driver: assignedDriver, trip, reading } = await createLinkedFleet(manager.user.id)
+            await finishTrip(trip)
             const deletedVehicle = await createVehicle(fleet.id)
             await VehicleAssignment.create({ driverId: assignedDriver.id, vehicleId: deletedVehicle.id })
             await deletedVehicle.destroy()
@@ -380,11 +392,13 @@ describe('DELETE /fleets/:id', () => {
             const response = await call('delete', `/fleets/${fleet.id}`, { confirmationName: fleet.name })
             expect(response.status).toBe(200)
             expect(await Fleet.findByPk(fleet.id)).toBeNull()
-            expect((await vehicle.reload()).fleetId).toBeNull()
-            expect((await Vehicle.findByPk(deletedVehicle.id, { paranoid: false })).fleetId).toBeNull()
+            expect(await Vehicle.findByPk(vehicle.id)).toBeNull()
+            expect(await Vehicle.findByPk(vehicle.id, { paranoid: false })).not.toBeNull()
+            expect(await Vehicle.findByPk(deletedVehicle.id, { paranoid: false })).not.toBeNull()
             expect(await VehicleAssignment.count({ where: { vehicleId: [vehicle.id, deletedVehicle.id] } })).toBe(0)
             expect(await VehicleAssignment.count({ where: { vehicleId: unrelatedVehicle.id } })).toBe(1)
-            expect((await trip.reload()).status).toBe('in_progress')
+            expect(await Vehicle.findByPk(unrelatedVehicle.id)).not.toBeNull()
+            expect((await trip.reload()).status).toBe('finished')
             expect(await Expense.findByPk(expense.id)).not.toBeNull()
             expect(await Photo.findByPk(photo.id)).not.toBeNull()
             expect(await OdometerReading.findByPk(reading.id)).not.toBeNull()
@@ -394,7 +408,8 @@ describe('DELETE /fleets/:id', () => {
         })
 
         test('Should serialize concurrent deletions', async () => {
-            const { fleet } = await createLinkedFleet(manager.user.id)
+            const { fleet, trip } = await createLinkedFleet(manager.user.id)
+            await finishTrip(trip)
             const responses = await Promise.all([
                 call('delete', `/fleets/${fleet.id}`, { confirmationName: fleet.name }),
                 call('delete', `/fleets/${fleet.id}`, { confirmationName: fleet.name })

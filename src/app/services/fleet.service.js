@@ -103,8 +103,17 @@ class FleetService {
 
             const vehicleIds = await VehicleRepository.findIdsByFleetId(id, { transaction, lock: true })
             if (vehicleIds.error) return vehicleIds
+
+            const trips = await TripRepository.countInProgressByVehicleIds(vehicleIds, { transaction })
+            if (trips.error) return trips
+            if (trips > 0) {
+                return utils.error(409, 'fleet_has_trip_in_progress', 'Há veículos desta frota em viagem. Aguarde as viagens terminarem para excluí-la.')
+            }
+
             const assignments = await VehicleAssignmentRepository.deleteByVehicleIds(vehicleIds, { transaction })
             if (assignments.error) return assignments
+            const vehicles = await VehicleRepository.destroy(vehicleIds, { transaction })
+            if (vehicles.error) return vehicles
 
             return FleetRepository.destroy(id, { transaction })
         })
