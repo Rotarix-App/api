@@ -10,7 +10,7 @@ const SchemaParserMiddleware = require('../middlewares/schema.middleware')
  * /fleets:
  *   post:
  *     summary: Create an active fleet
- *     description: The fleet belongs to the signed-in manager who creates it (D27).
+ *     description: The fleet belongs to the signed-in manager who creates it.
  *     tags: [Fleets]
  *     security:
  *       - bearerAuth: []
@@ -59,7 +59,7 @@ Router.post('/fleets', AuthMiddleware, roleMiddleware('manager'), SchemaParserMi
  * /fleets:
  *   get:
  *     summary: List fleets with name search and status filter
- *     description: Lists only the signed-in manager's fleets (D27).
+ *     description: Lists only the signed-in manager's fleets.
  *     tags: [Fleets]
  *     security:
  *       - bearerAuth: []
@@ -112,7 +112,7 @@ Router.get('/fleets', AuthMiddleware, roleMiddleware('manager'), SchemaParserMid
  * /fleets/{id}:
  *   get:
  *     summary: Get a fleet with counts
- *     description: Only the manager who created the fleet can access it; other managers get 404 (D27).
+ *     description: Only the manager who created the fleet can access it; other managers get 404.
  *     tags: [Fleets]
  *     security:
  *       - bearerAuth: []
@@ -165,7 +165,7 @@ Router.get('/fleets/:id', AuthMiddleware, roleMiddleware('manager'), SchemaParse
  * /fleets/{id}:
  *   put:
  *     summary: Edit fleet data preserving status and links
- *     description: Only the manager who created the fleet can access it; other managers get 404 (D27).
+ *     description: Only the manager who created the fleet can access it; other managers get 404.
  *     tags: [Fleets]
  *     security:
  *       - bearerAuth: []
@@ -224,7 +224,7 @@ Router.put('/fleets/:id', AuthMiddleware, roleMiddleware('manager'), SchemaParse
  * /fleets/{id}/status:
  *   patch:
  *     summary: Deactivate or reactivate a fleet preserving links and ongoing trips
- *     description: Only the manager who created the fleet can access it; other managers get 404 (D27).
+ *     description: Only the manager who created the fleet can access it; other managers get 404.
  *     tags: [Fleets]
  *     security:
  *       - bearerAuth: []
@@ -286,7 +286,7 @@ Router.patch('/fleets/:id/status', AuthMiddleware, roleMiddleware('manager'), Sc
  * /fleets/{id}:
  *   delete:
  *     summary: Delete a fleet keeping vehicles and history
- *     description: Only the manager who created the fleet can access it; other managers get 404 (D27).
+ *     description: Only the manager who created the fleet can access it; other managers get 404.
  *     tags: [Fleets]
  *     security:
  *       - bearerAuth: []
@@ -352,7 +352,7 @@ Router.delete('/fleets/:id', AuthMiddleware, roleMiddleware('manager'), SchemaPa
  * /fleets/{id}/vehicles:
  *   get:
  *     summary: List fleet vehicles and assigned drivers
- *     description: Only the manager who created the fleet can access it; other managers get 404 (D27).
+ *     description: Only the manager who created the fleet can access it; other managers get 404.
  *     tags: [Fleets]
  *     security:
  *       - bearerAuth: []
@@ -407,7 +407,7 @@ Router.get('/fleets/:id/vehicles', AuthMiddleware, roleMiddleware('manager'), Sc
  * /fleets/{id}/drivers:
  *   get:
  *     summary: List distinct assigned drivers
- *     description: Only the manager who created the fleet can access it; other managers get 404 (D27).
+ *     description: Only the manager who created the fleet can access it; other managers get 404.
  *     tags: [Fleets]
  *     security:
  *       - bearerAuth: []

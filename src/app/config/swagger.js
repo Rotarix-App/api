@@ -99,7 +99,7 @@ const options = {
                         tripDriver: {
                             allOf: [{ $ref: '#/components/schemas/FleetDriverSummary' }],
                             nullable: true,
-                            description: 'Driver of the trip in progress (S08), or null when the vehicle is free.',
+                            description: 'Driver of the trip in progress, or null when the vehicle is free.',
                         },
                         assignedDrivers: { type: 'array', items: { $ref: '#/components/schemas/FleetDriverSummary' } },
                     },
