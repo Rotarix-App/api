@@ -252,10 +252,11 @@ describe('GET /fleets/:id and relationship lists', () => {
             expect(vehicles.status).toBe(200)
             expect(vehicles.body.data).toHaveLength(2)
             expect(vehicles.body.data.find(row => row.id === vehicle.id)).toMatchObject({
+                available: false,
                 tripStatus: 'in_progress',
                 tripDriver: { id: assignedDriver.id, name: assignedDriver.name }
             })
-            expect(vehicles.body.data.find(row => row.id === secondVehicle.id)).toMatchObject({ tripStatus: 'free', tripDriver: null })
+            expect(vehicles.body.data.find(row => row.id === secondVehicle.id)).toMatchObject({ available: true, tripStatus: 'free', tripDriver: null })
             expect(vehicles.body.data.find(row => row.id === vehicle.id).assignedDrivers).toHaveLength(2)
             const drivers = await call('get', `/fleets/${fleet.id}/drivers`)
             expect(drivers.status).toBe(200)

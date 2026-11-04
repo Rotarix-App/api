@@ -95,6 +95,7 @@ const options = {
                         year: { type: 'integer' },
                         currentOdometer: { type: 'integer' },
                         status: { type: 'string', enum: ['active', 'inactive'] },
+                        available: { type: 'boolean', description: 'Active vehicle, active fleet and no trip in progress.' },
                         tripStatus: { type: 'string', enum: ['free', 'in_progress'] },
                         tripDriver: {
                             allOf: [{ $ref: '#/components/schemas/FleetDriverSummary' }],

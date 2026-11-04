@@ -166,6 +166,7 @@ class FleetService {
                 year: vehicle.year,
                 currentOdometer: vehicle.currentOdometer,
                 status: vehicle.status,
+                available: vehicle.status === 'active' && fleet.status === 'active' && !vehicle.trips.length,
                 tripStatus: vehicle.trips.length ? 'in_progress' : 'free',
                 tripDriver: tripDriver ? { id: tripDriver.id, name: tripDriver.name } : null,
                 assignedDrivers: vehicle.assignedDrivers.map((driver) => ({ id: driver.id, name: driver.name }))
