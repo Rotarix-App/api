@@ -86,7 +86,7 @@ describe.each(endpoints.filter(([, path]) => path.includes('/1')))('%s %s resour
 })
 
 describe.each([
-    ['get', '/fleets/1', undefined, Fleet, 'findByPk'],
+    ['get', '/fleets/1', undefined, Fleet, 'findOne'],
     ['put', '/fleets/1', { name: 'Fleet', baseRegion: 'MG' }, Fleet, 'update'],
     ['patch', '/fleets/1/status', { status: 'inactive' }, Fleet, 'update'],
     ['get', '/fleets/1/vehicles', undefined, Vehicle, 'findAll'],
@@ -94,7 +94,7 @@ describe.each([
 ])('%s %s database failures', (method, path, body, model, methodName) => {
     describe('errors', () => {
         test('Should return internal_server_error and leave the fleet unchanged', async () => {
-            const fleet = await createFleet()
+            const fleet = await createFleet(manager.user.id)
             jest.spyOn(console, 'log').mockImplementation(() => {})
             jest.spyOn(model, methodName).mockRejectedValueOnce(new Error('Injected database failure'))
             const response = await call(method, path.replace('/1', `/${fleet.id}`), body)
@@ -102,6 +102,19 @@ describe.each([
             expect(response.body.id).toBe('internal_server_error')
             jest.restoreAllMocks()
             expect((await Fleet.findByPk(fleet.id)).name).toBe(fleet.name)
+        })
+    })
+})
+
+describe.each(endpoints.filter(([, path]) => path.includes('/1')))('%s %s ownership', (method, path, body) => {
+    describe('errors', () => {
+        test('Should return 404 for a fleet created by another manager and leave it unchanged', async () => {
+            const { fleet, vehicle } = await createLinkedFleet(manager.user.id, { name: 'Test Fleet' })
+            const response = await call(method, path.replace('/1', `/${fleet.id}`), body, otherManager.token)
+            expect(response.status).toBe(404)
+            expect(response.body.id).toBe('fleet_not_found')
+            expect(await Fleet.findByPk(fleet.id)).toMatchObject({ name: 'Test Fleet', status: 'active' })
+            expect(await VehicleAssignment.count({ where: { vehicleId: vehicle.id } })).toBe(1)
         })
     })
 })
@@ -141,8 +154,15 @@ describe('POST /fleets', () => {
             expect(response.body.data.description).toBeNull()
         })
 
+        test('Should assign the fleet to the signed-in manager', async () => {
+            const response = await call('post', '/fleets', { name: 'Fleet', baseRegion: 'MG', managerId: otherManager.user.id })
+            expect(response.status).toBe(201)
+            expect(response.body.data.managerId).toBe(manager.user.id)
+            expect((await Fleet.findByPk(response.body.data.id)).managerId).toBe(manager.user.id)
+        })
+
         test('Should allow duplicate fleet names', async () => {
-            const fleet = await createFleet()
+            const fleet = await createFleet(manager.user.id)
             const response = await call('post', '/fleets', { name: fleet.name, baseRegion: 'MG' })
             expect(response.status).toBe(201)
         })
@@ -169,7 +189,7 @@ describe('GET /fleets', () => {
     describe('success', () => {
         test('Should preserve numeric searches and return empty results', async () => {
             const name = String(Date.now())
-            const fleet = await createFleet({ name })
+            const fleet = await createFleet(manager.user.id, { name })
             const response = await call('get', `/fleets?search=${name}`)
             expect(response.status).toBe(200)
             expect(response.body.data.map(row => row.id)).toContain(fleet.id)
@@ -179,17 +199,26 @@ describe('GET /fleets', () => {
 
         test.each(['%', '_', "'", '\\'])('Should treat %s as literal search text', async character => {
             const suffix = randomUUID()
-            const fleet = await createFleet({ name: `${character}${suffix}` })
-            await createFleet({ name: `other${suffix}` })
+            const fleet = await createFleet(manager.user.id, { name: `${character}${suffix}` })
+            await createFleet(manager.user.id, { name: `other${suffix}` })
             const response = await call('get', `/fleets?search=${encodeURIComponent(character + suffix)}`)
             expect(response.status).toBe(200)
             expect(response.body.data.map(row => row.id)).toEqual([fleet.id])
         })
 
+        test('Should list only the fleets of the signed-in manager', async () => {
+            const name = randomUUID()
+            const own = await createFleet(manager.user.id, { name })
+            await createFleet(otherManager.user.id, { name })
+            const response = await call('get', `/fleets?search=${name}`)
+            expect(response.status).toBe(200)
+            expect(response.body.data.map(row => row.id)).toEqual([own.id])
+        })
+
         test('Should filter statuses and default to all fleets', async () => {
             const name = randomUUID()
-            const active = await createFleet({ name })
-            const inactiveFleet = await createFleet({ name, status: 'inactive' })
+            const active = await createFleet(manager.user.id, { name })
+            const inactiveFleet = await createFleet(manager.user.id, { name, status: 'inactive' })
             const all = await call('get', `/fleets?search=${name}`)
             const onlyActive = await call('get', `/fleets?search=${name}&status=active`)
             const onlyInactive = await call('get', `/fleets?search=${name}&status=inactive`)
@@ -203,7 +232,7 @@ describe('GET /fleets', () => {
 describe('GET /fleets/:id and relationship lists', () => {
     describe('success', () => {
         test('Should count distinct drivers, ignore soft-deleted rows and show trip states', async () => {
-            const { fleet, vehicle, driver: assignedDriver } = await createLinkedFleet()
+            const { fleet, vehicle, driver: assignedDriver } = await createLinkedFleet(manager.user.id)
             const secondVehicle = await createVehicle(fleet.id)
             await VehicleAssignment.create({ driverId: assignedDriver.id, vehicleId: secondVehicle.id })
             const { user: secondDriver } = await createTestUser('driver')
@@ -236,7 +265,7 @@ describe('GET /fleets/:id and relationship lists', () => {
         })
 
         test('Should expose zero counts and empty relationship lists', async () => {
-            const fleet = await createFleet()
+            const fleet = await createFleet(manager.user.id)
             const detail = await call('get', `/fleets/${fleet.id}`)
             expect(detail.body.data).toMatchObject({ vehicleCount: 0, driverCount: 0, onTripCount: 0 })
             for (const suffix of ['vehicles', 'drivers']) {
@@ -251,7 +280,7 @@ describe('GET /fleets/:id and relationship lists', () => {
 describe('PUT /fleets/:id', () => {
     describe('errors', () => {
         test('Should require both editable fields', async () => {
-            const fleet = await createFleet()
+            const fleet = await createFleet(manager.user.id)
             const response = await call('put', `/fleets/${fleet.id}`, { name: 'Changed' })
             expect(response.status).toBe(400)
             expect(response.body.id).toBe('invalid_schema')
@@ -259,15 +288,11 @@ describe('PUT /fleets/:id', () => {
     })
 
     describe('success', () => {
-        test('Should let another manager view, edit, change status and delete a fleet', async () => {
-            const created = await call('post', '/fleets', { name: 'Shared Fleet', baseRegion: 'MG' })
-            const id = created.body.data.id
-            expect((await call('get', `/fleets/${id}`, undefined, otherManager.token)).status).toBe(200)
-            const edited = await call('put', `/fleets/${id}`, { name: 'Shared Changed', baseRegion: 'SP', status: 'inactive' }, otherManager.token)
-            expect(edited.status).toBe(200)
-            expect(edited.body.data).toMatchObject({ name: 'Shared Changed', baseRegion: 'SP', status: 'active' })
-            expect((await call('patch', `/fleets/${id}/status`, { status: 'inactive' }, otherManager.token)).status).toBe(200)
-            expect((await call('delete', `/fleets/${id}`, { confirmationName: 'Shared Changed' }, otherManager.token)).status).toBe(200)
+        test('Should edit the fields without changing the status or the owner', async () => {
+            const fleet = await createFleet(manager.user.id)
+            const response = await call('put', `/fleets/${fleet.id}`, { name: 'Changed', baseRegion: 'SP', status: 'inactive', managerId: otherManager.user.id })
+            expect(response.status).toBe(200)
+            expect(response.body.data).toMatchObject({ name: 'Changed', baseRegion: 'SP', status: 'active', managerId: manager.user.id })
         })
     })
 })
@@ -283,7 +308,7 @@ describe('PATCH /fleets/:id/status', () => {
 
     describe('success', () => {
         test('Should deactivate and reactivate idempotently without altering links or trips', async () => {
-            const { fleet, vehicle, trip } = await createLinkedFleet()
+            const { fleet, vehicle, trip } = await createLinkedFleet(manager.user.id)
             for (const status of ['inactive', 'inactive', 'active', 'active']) {
                 const response = await call('patch', `/fleets/${fleet.id}/status`, { status })
                 expect(response.status).toBe(200)
@@ -305,7 +330,7 @@ describe('DELETE /fleets/:id', () => {
         })
 
         test('Should compare the exact name and leave data untouched on mismatch', async () => {
-            const { fleet, vehicle } = await createLinkedFleet({ name: 'Exact Name' })
+            const { fleet, vehicle } = await createLinkedFleet(manager.user.id, { name: 'Exact Name' })
             for (const name of ['exact name', 'Exact Name ', 'Wrong']) {
                 const response = await call('delete', `/fleets/${fleet.id}`, { confirmationName: name })
                 expect(response.status).toBe(400)
@@ -316,7 +341,7 @@ describe('DELETE /fleets/:id', () => {
         })
 
         test('Should roll back deleted assignments when fleet deletion fails', async () => {
-            const { fleet, vehicle } = await createLinkedFleet()
+            const { fleet, vehicle } = await createLinkedFleet(manager.user.id)
             jest.spyOn(console, 'log').mockImplementation(() => {})
             jest.spyOn(Fleet, 'destroy').mockRejectedValueOnce(new Error('Injected deletion failure'))
             const response = await call('delete', `/fleets/${fleet.id}`, { confirmationName: fleet.name })
@@ -330,7 +355,7 @@ describe('DELETE /fleets/:id', () => {
 
     describe('success', () => {
         test('Should delete an empty fleet', async () => {
-            const fleet = await createFleet()
+            const fleet = await createFleet(manager.user.id)
             const response = await call('delete', `/fleets/${fleet.id}`, { confirmationName: fleet.name })
             expect(response.status).toBe(200)
             expect(response.body.data).toEqual({})
@@ -338,11 +363,11 @@ describe('DELETE /fleets/:id', () => {
         })
 
         test('Should unlink all vehicles and preserve records including an ongoing trip', async () => {
-            const { fleet, vehicle, driver: assignedDriver, trip, reading } = await createLinkedFleet()
+            const { fleet, vehicle, driver: assignedDriver, trip, reading } = await createLinkedFleet(manager.user.id)
             const deletedVehicle = await createVehicle(fleet.id)
             await VehicleAssignment.create({ driverId: assignedDriver.id, vehicleId: deletedVehicle.id })
             await deletedVehicle.destroy()
-            const unrelatedFleet = await createFleet()
+            const unrelatedFleet = await createFleet(manager.user.id)
             const unrelatedVehicle = await createVehicle(unrelatedFleet.id)
             await VehicleAssignment.create({ driverId: driver.user.id, vehicleId: unrelatedVehicle.id })
             const photo = await Photo.create({ kind: 'receipt', storageKey: randomUUID(), mimeType: 'image/jpeg', sizeBytes: 100, uploadedBy: assignedDriver.id })
@@ -369,19 +394,19 @@ describe('DELETE /fleets/:id', () => {
         })
 
         test('Should serialize concurrent deletions', async () => {
-            const { fleet } = await createLinkedFleet()
+            const { fleet } = await createLinkedFleet(manager.user.id)
             const responses = await Promise.all([
                 call('delete', `/fleets/${fleet.id}`, { confirmationName: fleet.name }),
-                call('delete', `/fleets/${fleet.id}`, { confirmationName: fleet.name }, otherManager.token)
+                call('delete', `/fleets/${fleet.id}`, { confirmationName: fleet.name })
             ])
             expect(responses.map(response => response.status).sort()).toEqual([200, 404])
         })
 
         test('Should serialize renaming with confirmation against the current name', async () => {
-            const fleet = await createFleet()
+            const fleet = await createFleet(manager.user.id)
             const [renamed, deleted] = await Promise.all([
                 call('put', `/fleets/${fleet.id}`, { name: 'Renamed Fleet', baseRegion: 'MG' }),
-                call('delete', `/fleets/${fleet.id}`, { confirmationName: fleet.name }, otherManager.token)
+                call('delete', `/fleets/${fleet.id}`, { confirmationName: fleet.name })
             ])
             expect([[200, 400], [404, 200]]).toContainEqual([renamed.status, deleted.status])
             if (renamed.status === 200) expect(deleted.body.id).toBe('fleet_name_confirmation_mismatch')

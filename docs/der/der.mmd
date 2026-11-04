@@ -2,6 +2,7 @@
 title: Rotarix — Entity-Relationship Diagram
 ---
 erDiagram
+    users ||--o{ fleets : "manager_id"
     fleets |o--o{ vehicles : "fleet_id"
     users ||--o{ vehicle_assignments : "driver_id"
     vehicles ||--o{ vehicle_assignments : "vehicle_id"
@@ -32,6 +33,7 @@ erDiagram
 
     fleets {
         int id PK
+        int manager_id FK
         varchar(100) name
         varchar(120) base_region
         varchar(255) description "nullable"

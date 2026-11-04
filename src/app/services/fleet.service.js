@@ -8,10 +8,11 @@ const utils = require('../utils')
 
 class FleetService {
     /**
+     * @param {number} managerId
      * @param {object} filters
      */
-    async list(filters) {
-        const fleets = await FleetRepository.findAll(filters)
+    async list(managerId, filters) {
+        const fleets = await FleetRepository.findAllByManagerId(managerId, filters)
         if (fleets.error || !fleets.length) return fleets
 
         return this.#withCounts(fleets)
@@ -19,9 +20,10 @@ class FleetService {
 
     /**
      * @param {number} id
+     * @param {number} managerId
      */
-    async findById(id) {
-        const fleet = await FleetRepository.findById(id)
+    async findById(id, managerId) {
+        const fleet = await FleetRepository.findByIdAndManagerId(id, managerId)
         if (fleet.error) return fleet
 
         const fleets = await this.#withCounts([fleet])
@@ -53,18 +55,20 @@ class FleetService {
     }
 
     /**
+     * @param {number} managerId
      * @param {{ name: string, baseRegion: string, description?: string }} data
      */
-    async create({ name, baseRegion, description = null }) {
-        return FleetRepository.create({ name, baseRegion, description, status: 'active' })
+    async create(managerId, { name, baseRegion, description = null }) {
+        return FleetRepository.create({ managerId, name, baseRegion, description, status: 'active' })
     }
 
     /**
      * @param {number} id
+     * @param {number} managerId
      * @param {{ name: string, baseRegion: string, description?: string }} data
      */
-    async update(id, { name, baseRegion, description = null }) {
-        return this.#write(id, async (fleet, transaction) => {
+    async update(id, managerId, { name, baseRegion, description = null }) {
+        return this.#write(id, managerId, async (fleet, transaction) => {
             const updated = await FleetRepository.update(id, { name, baseRegion, description }, { transaction })
             if (updated.error) return updated
 
@@ -74,10 +78,11 @@ class FleetService {
 
     /**
      * @param {number} id
+     * @param {number} managerId
      * @param {'active' | 'inactive'} status
      */
-    async changeStatus(id, status) {
-        return this.#write(id, async (fleet, transaction) => {
+    async changeStatus(id, managerId, status) {
+        return this.#write(id, managerId, async (fleet, transaction) => {
             const updated = await FleetRepository.update(id, { status }, { transaction })
             if (updated.error) return updated
 
@@ -87,10 +92,11 @@ class FleetService {
 
     /**
      * @param {number} id
+     * @param {number} managerId
      * @param {string} confirmationName
      */
-    async destroy(id, confirmationName) {
-        return this.#write(id, async (fleet, transaction) => {
+    async destroy(id, managerId, confirmationName) {
+        return this.#write(id, managerId, async (fleet, transaction) => {
             if (confirmationName !== fleet.name) {
                 return utils.error(400, 'fleet_name_confirmation_mismatch', 'O nome informado não confere com o nome da frota.')
             }
@@ -106,14 +112,15 @@ class FleetService {
 
     /**
      * @param {number} id
+     * @param {number} managerId
      * @param {function} action
      */
-    async #write(id, action) {
+    async #write(id, managerId, action) {
         const transaction = await connection.transaction().catch(utils.logError)
         if (!transaction) return utils.error(500, 'internal_server_error', 'Não foi possível alterar a frota.')
 
         try {
-            const fleet = await FleetRepository.findById(id, { transaction, lock: true })
+            const fleet = await FleetRepository.findByIdAndManagerId(id, managerId, { transaction, lock: true })
             const result = fleet.error ? fleet : await action(fleet, transaction)
             if (result.error) {
                 await transaction.rollback()
@@ -131,9 +138,10 @@ class FleetService {
 
     /**
      * @param {number} id
+     * @param {number} managerId
      */
-    async listVehicles(id) {
-        const fleet = await FleetRepository.findById(id)
+    async listVehicles(id, managerId) {
+        const fleet = await FleetRepository.findByIdAndManagerId(id, managerId)
         if (fleet.error) return fleet
         const vehicles = await VehicleRepository.findByFleetId(id)
         if (vehicles.error) return vehicles
@@ -158,9 +166,10 @@ class FleetService {
 
     /**
      * @param {number} id
+     * @param {number} managerId
      */
-    async listDrivers(id) {
-        const fleet = await FleetRepository.findById(id)
+    async listDrivers(id, managerId) {
+        const fleet = await FleetRepository.findByIdAndManagerId(id, managerId)
         if (fleet.error) return fleet
         const drivers = await UserRepository.findDriversByFleetId(id)
         if (drivers.error) return drivers

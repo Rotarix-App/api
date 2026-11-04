@@ -15,6 +15,7 @@ Started 2026-10-18. Every entry here is either stated in the official sources, c
 | — | 2026-10-20 | Integration tests may recreate `rotarix_test` on the user's local MySQL. |
 | — | 2026-10-20 | A driver's fleet is **derived from their vehicle assignments** (`vehicle_assignments → vehicles.fleet_id`), not stored: `users` has no `fleet_id`. "One driver, one fleet" (D13) is a rule the service enforces when assignments are saved. |
 | **D09** | 2026-10-20 | **The Figma prototype "Rotarix — Protótipo Mobile" (v1.0, 2026-09-26) is the source of truth for functionality**: screens, flows, fields and behavior. Where the official documents diverge, follow the prototype. The official documents still govern non-functional requirements and any rule the prototype doesn't contradict. See [`prototype.md`](prototype.md). |
+| **D27** | 2026-11-04 | **A manager only accesses the fleets they created.** Each fleet belongs to the manager who creates it (`fleets.manager_id`). Another manager can't see, edit, deactivate or delete it; the API answers 404, as for any resource that belongs to someone else. |
 
 ## From the official sources
 
@@ -62,7 +63,6 @@ The repository uses Node.js/CommonJS, Express 5, Sequelize, Zod, JWT/bcryptjs an
 - The development plan in [`progress.md`](progress.md), and the validation criteria in [`requirements-analysis.md`](requirements-analysis.md).
 - No choice yet on hosting, image storage or how service alerts are configured (P09).
 - **Physical schema** ([`data-model.md`](data-model.md), written 2026-10-20 at the user's request): the models and `data/db.sql` exist, but the schema awaits approval. These are applied as proposals:
-  - a single company (P07);
   - separate tables for refuelings and maintenances (P17, P18);
   - `service_reminders` (P09);
   - Sequelize `DATETIME` timestamps instead of the BIGINT template;
@@ -70,7 +70,7 @@ The repository uses Node.js/CommonJS, Express 5, Sequelize, Zod, JWT/bcryptjs an
   - kebab-case for multi-word file names.
 - **Choices made while building fleets** (`Frotas` branch, applied; review them):
   - Routes: `POST` and `GET /fleets`; `GET`, `PUT` and `DELETE /fleets/:id`; `PATCH /fleets/:id/status` (deactivate and reactivate, idempotent); `GET /fleets/:id/vehicles` and `/fleets/:id/drivers`. All manager-only.
-  - Every active manager can act on every fleet (the P07 assumption, not a decision).
+  - A fleet belongs to its creator (D27). `managerId` is set from the token and can't be sent in the body.
   - The list filter defaults to `all`. The name search is a literal, case-insensitive substring.
   - Counts exclude soft-deleted vehicles and users, and count drivers once per fleet. `onTripCount` counts vehicles with a trip in progress.
   - Deleting needs `confirmationName` equal to the stored name, case and spaces included (`400 fleet_name_confirmation_mismatch`). It locks the fleet row, deletes the assignments of all its vehicles (soft-deleted ones too), then deletes the fleet; the FK sets `vehicles.fleet_id` to NULL.
@@ -94,6 +94,6 @@ When the user answers an open question (see [`requirements-analysis.md`](require
 
 | ID | Date | Decision | Confirmed by | Resolves |
 |---|---|---|---|---|
-| D27 | YYYY-MM-DD | … | user | Pxx |
+| D28 | YYYY-MM-DD | … | user | Pxx |
 
 Then update the rules and docs it affects, and set the question's status to **Resolved → Dxx**. If the prototype changes, update [`prototype.md`](prototype.md) and review D10–D26.

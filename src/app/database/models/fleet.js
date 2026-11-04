@@ -7,6 +7,10 @@ const Fleet = connection.define('Fleet', {
         primaryKey: true,
         autoIncrement: true
     },
+    managerId: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
     name: {
         type: DataTypes.STRING(100),
         allowNull: false

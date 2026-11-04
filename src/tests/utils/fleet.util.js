@@ -3,10 +3,11 @@ const { Fleet, Vehicle, VehicleAssignment, OdometerReading, Trip } = require('..
 const { createTestUser } = require('./user.util')
 
 /**
+ * @param {number} managerId
  * @param {object} overrides
  */
-async function createFleet(overrides = {}) {
-    return Fleet.create({ name: `Fleet ${randomUUID()}`, baseRegion: 'Uberlândia, MG', ...overrides })
+async function createFleet(managerId, overrides = {}) {
+    return Fleet.create({ managerId, name: `Fleet ${randomUUID()}`, baseRegion: 'Uberlândia, MG', ...overrides })
 }
 
 /**
@@ -21,10 +22,11 @@ async function createVehicle(fleetId, overrides = {}) {
 }
 
 /**
+ * @param {number} managerId
  * @param {object} overrides
  */
-async function createLinkedFleet(overrides = {}) {
-    const fleet = await createFleet(overrides)
+async function createLinkedFleet(managerId, overrides = {}) {
+    const fleet = await createFleet(managerId, overrides)
     const vehicle = await createVehicle(fleet.id)
     const { user: driver } = await createTestUser('driver')
     await VehicleAssignment.create({ driverId: driver.id, vehicleId: vehicle.id })

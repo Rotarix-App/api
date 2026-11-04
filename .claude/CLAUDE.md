@@ -4,7 +4,7 @@ Back end (Node.js · Express 5 · Sequelize/MySQL) for **Rotarix**, a mobile fle
 
 > **Status (2026-11-04):**
 > - **Built at the user's request:** the data model (awaiting approval, `docs/data-model.md`) and the **auth and users** module (register, login, `/users/@me` profile, password, account deletion), which is the reference implementation.
-> - **Built on the `Frotas` branch:** the **fleets** module (S06–S08, M01–M03), without the S08 Resumo tab. It assumes one company (P07, still open).
+> - **Built on the `Frotas` branch:** the **fleets** module (S06–S08, M01–M03), without the S08 Resumo tab. Each fleet belongs to the manager who created it (D27).
 > - **Not started:** vehicles, drivers, trips, expenses and metrics. Implement one only when the user asks for it.
 
 **The Figma prototype is the source of truth for functionality** (D09): [Rotarix — Protótipo Mobile](https://www.figma.com/design/dTeXHA65uZrG3dSnWH0rE8/Rotarix-%E2%80%94-Prot%C3%B3tipo-Mobile?node-id=25-2147). Its content is written down in `.claude/docs/prototype.md`.
@@ -20,8 +20,8 @@ Back end (Node.js · Express 5 · Sequelize/MySQL) for **Rotarix**, a mobile fle
 | `.claude/rules/testing.md` | Jest/Supertest setup and conventions | When touching `src/tests/`, Jest or CI config |
 | `.claude/docs/prototype.md` | Functional spec of every prototype screen (S01–S37) and modal (M01–M24), with API implications | On demand |
 | `.claude/docs/data-model.md` | Every table and column with its source screen, relationships, constraints and assumptions; the ERD is in `docs/der/` | On demand |
-| `.claude/docs/requirements-analysis.md` | Lookup by task, RF and RNF digest, prototype-vs-docs alignment, open questions P01–P22 | On demand |
-| `.claude/docs/decisions.md` | Confirmed decisions (D01–D26) and how to record new ones | On demand |
+| `.claude/docs/requirements-analysis.md` | Lookup by task, RF and RNF digest, prototype-vs-docs alignment, open questions P01–P23 | On demand |
+| `.claude/docs/decisions.md` | Confirmed decisions (D01–D27) and how to record new ones | On demand |
 | `.claude/docs/progress.md` | Work log, what exists in code, known issues, recommended plan | On demand |
 | `.claude/docs/project-brief.md` | Client, timeline, method, assumptions, risks, acceptance criteria | On demand |
 | `.claude/docs/sources/` | The three official documents, **verbatim, in Portuguese** | Only the sections you need |

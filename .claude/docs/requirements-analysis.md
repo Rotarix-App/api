@@ -19,9 +19,9 @@ This is an analysis. It doesn't change the sources, which stay verbatim in Portu
 | Area | Prototype | Official sections | Open questions |
 |---|---|---|---|
 | Accounts and profile | S01–S03, S19–S20, S36–S37, M14–M17 | RF01–RF03, UC01, RN01, RNF02 | P06, P14, P20 |
-| Fleets | S06–S08, M01–M03 | RF04, UC02, RN02, RN05 | P07, P20 |
+| Fleets | S06–S08, M01–M03 | RF04, UC02, RN02, RN05 | P20, P23 |
 | Vehicles | S09–S10, S23–S24, M04–M06 | RF05, RF09, UC03, RN03–RN05 | P09, P20 |
-| Drivers and assignments | S11–S14, M07–M09 | RF06, RF07, UC04, RN02–RN03 | P06, P07, P12 |
+| Drivers and assignments | S11–S14, M07–M09 | RF06, RF07, UC04, RN02–RN03 | P06, P12 |
 | Trips and mileage | S21–S22, S25–S30, M12–M13, M18 | RF10, RF13, UC06, RN06–RN08 | P12 |
 | Expenses, refueling, maintenance | S31–S35, M10–M11 | RF11, RF12, UC07, UC08, RN08, RNF05 | P10, P17, P18, P19, P21 |
 | Metrics and activity | S04–S05, S15–S18 | RF08, UC05, ER User roles | P20 |
@@ -118,7 +118,7 @@ Comparison done on 2026-10-20 between the official sources (the PDFs and the mar
 
 ### Still unanswered
 
-See P06, P07, P09–P12, P14–P22 below.
+See P06, P09–P12, P14–P23 below.
 
 ## Open questions
 
@@ -131,8 +131,8 @@ P stands for *pending*. When the user answers one, record the answer and its dat
 | P03 | The official matrix maps RF06→UC03, RF08→UC04, RF10/RF13→UC05; the text points to UC04, UC05, UC06. | Approving a corrected matrix | Open (documentation only) |
 | P04 | PI mentions location tracking and communication; no RF covers them. | Scope | **Resolved → D17** (out of scope) |
 | P05 | RF03 is ambiguous about read-only fields; RF06 lets managers edit driver data. | Who edits CNH | **Resolved → D15** |
-| P06 | RF01 lets drivers sign up; RF06 lets managers register them. | Account creation flow | **Partly → D14.** Still open: how a self-registered driver becomes visible to a manager and gets assigned (tied to P07). |
-| P07 | Fleets "under the manager's responsibility"; no ownership or isolation defined. | Access between managers; separation per company | Open. M15 hints at company-owned fleets ("frotas e veículos da empresa"). The data model assumes **one company** for now (`data-model.md`); adding companies later is an additive change. The fleets module (`Frotas` branch, 2026-11-04) follows this assumption: every active manager can see, edit, deactivate and delete every fleet. Since anyone can sign up as a manager (`POST /register`), this needs an answer before release. |
+| P06 | RF01 lets drivers sign up; RF06 lets managers register them. | Account creation flow | **Partly → D14.** Still open: how a self-registered driver becomes visible to a manager and gets assigned. Fleets belong to their manager (D27), but drivers don't: should a manager see every driver, only the ones they created, or only the ones assigned to their fleets? |
+| P07 | Fleets "under the manager's responsibility"; no ownership or isolation defined. | Access between managers; separation per company | **Resolved → D27** (2026-11-04): each fleet belongs to the manager who created it, and only that manager accesses it. |
 | P08 | RF08 says "the user"; UC05 points to the manager. | Who sees metrics, and which ones | **Resolved → D16** |
 | P09 | UC08/RN08 require maintenance with photos; RF05 requires service alerts. | Alert kinds, intervals and where they're configured | Open. The prototype shows "Revisão em X km", "Troca de óleo vencida há X km" and "Próxima revisão aos X km", but has no configuration screen. The data model proposes a `service_reminders` table. |
 | P10 | RF12 attachments; UC07 "when necessary"; RN08 odometer photo. | Which receipts are required; formats, sizes, retention, storage | **Partly → D26** (invoice optional for refueling and maintenance). Open: receipt on a plain expense (S32); formats and storage. |
@@ -148,6 +148,7 @@ P stands for *pending*. When the user answers one, record the answer and its dat
 | P20 | Flows the prototype doesn't draw: change password (RF03), reactivate a fleet (RF04) or a driver, deactivate a vehicle that isn't on a trip, delete a vehicle during a trip, the manager's view of an expense or maintenance record with its receipt, service-alert configuration (P09), the "at least one vehicle" assignment error (RF07), and empty, error and upload-failure states (P11). | Design these flows, or confirm the official rule applies | Open. The API already implements changing the password as RF03 describes (`PUT /users/@me/password`: current password plus confirmation); only the screen is missing. |
 | P21 | M10–M11 let a driver edit and delete expenses, with no limits shown. | Whether there are limits (for example after the trip is finished) and whether managers can edit or delete | Open |
 | P22 | M17 (driver deletes their own account) doesn't say what happens to a trip in progress. If the account were deleted anyway, the trip would stay in progress forever and keep its vehicle blocked (RN06). | Whether to block the deletion, or to cancel or close the trip automatically | Open. **Proposal implemented:** `DELETE /users/@me` returns 409 `trip_in_progress` until the trip is finished or cancelled. |
+| P23 | D25 (M15) keeps the company's fleets and vehicles when a manager deletes their account, but under D27 only that manager can access their fleets. After the deletion, nobody can reach them. | Whether a manager's fleets are transferred to another manager, blocked from deletion, or left orphaned | Open. Today they are left orphaned: `fleets.manager_id` keeps pointing at the anonymized user. |
 
 ## Validation criteria (proposal)
 

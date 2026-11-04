@@ -4,12 +4,12 @@ const utils = require('../utils')
 
 class FleetRepository {
     /**
-     * @param {{ search?: string, status?: string, id?: number }} filters
+     * @param {number} managerId
+     * @param {{ search?: string, status?: string }} filters
      * @param {object} options
      */
-    async findAll({ search, status, id } = {}, options = {}) {
-        const conditions = {}
-        if (id !== undefined) conditions.id = id
+    async findAllByManagerId(managerId, { search, status } = {}, options = {}) {
+        const conditions = { managerId }
         if (status && status !== 'all') conditions.status = status
         if (search) conditions[Op.and] = where(fn('LOCATE', search, col('Fleet.name')), { [Op.gt]: 0 })
 
@@ -25,6 +25,19 @@ class FleetRepository {
      */
     async findById(id, options = {}) {
         const fleet = await Fleet.findByPk(id, options).catch(utils.logError)
+        if (fleet === undefined) return utils.error(500, 'internal_server_error', 'Não foi possível consultar a frota.')
+        if (!fleet) return utils.error(404, 'fleet_not_found', 'Frota não encontrada.')
+
+        return fleet
+    }
+
+    /**
+     * @param {number} id
+     * @param {number} managerId
+     * @param {object} options
+     */
+    async findByIdAndManagerId(id, managerId, options = {}) {
+        const fleet = await Fleet.findOne({ where: { id, managerId }, ...options }).catch(utils.logError)
         if (fleet === undefined) return utils.error(500, 'internal_server_error', 'Não foi possível consultar a frota.')
         if (!fleet) return utils.error(404, 'fleet_not_found', 'Frota não encontrada.')
 

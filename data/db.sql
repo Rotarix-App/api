@@ -3,20 +3,6 @@ DROP DATABASE IF EXISTS rotarix;
 CREATE DATABASE IF NOT EXISTS rotarix;
 USE rotarix;
 
-CREATE TABLE `fleets` (
-	`id` INT(11) NOT NULL AUTO_INCREMENT,
-	`name` VARCHAR(100) NOT NULL,
-	`base_region` VARCHAR(120) NOT NULL,
-	`description` VARCHAR(255) NULL DEFAULT NULL,
-	`status` ENUM('active','inactive') NOT NULL DEFAULT 'active',
-	`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-	PRIMARY KEY (`id`) USING BTREE
-)
-COLLATE='utf8mb4_general_ci'
-ENGINE=InnoDB
-;
-
 CREATE TABLE `users` (
 	`id` INT(11) NOT NULL AUTO_INCREMENT,
 	`role` ENUM('manager','driver') NOT NULL,
@@ -32,6 +18,23 @@ CREATE TABLE `users` (
 	`deleted_at` DATETIME NULL DEFAULT NULL,
 	PRIMARY KEY (`id`) USING BTREE,
 	UNIQUE INDEX `uq_users_email` (`email`)
+)
+COLLATE='utf8mb4_general_ci'
+ENGINE=InnoDB
+;
+
+CREATE TABLE `fleets` (
+	`id` INT(11) NOT NULL AUTO_INCREMENT,
+	`manager_id` INT(11) NOT NULL,
+	`name` VARCHAR(100) NOT NULL,
+	`base_region` VARCHAR(120) NOT NULL,
+	`description` VARCHAR(255) NULL DEFAULT NULL,
+	`status` ENUM('active','inactive') NOT NULL DEFAULT 'active',
+	`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`) USING BTREE,
+	INDEX `fk_fleets_manager` (`manager_id`),
+	CONSTRAINT `fk_fleets_manager` FOREIGN KEY (`manager_id`) REFERENCES `users` (`id`)
 )
 COLLATE='utf8mb4_general_ci'
 ENGINE=InnoDB

@@ -44,6 +44,7 @@ const options = {
                             type: 'object',
                             properties: {
                                 id: { type: 'integer' },
+                                managerId: { type: 'integer', description: 'Manager who created the fleet; only they can access it.' },
                                 status: { type: 'string', enum: ['active', 'inactive'] },
                                 createdAt: { type: 'string', format: 'date-time' },
                                 updatedAt: { type: 'string', format: 'date-time' },

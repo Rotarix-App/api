@@ -6,7 +6,8 @@ const { createTestUser } = require('../../utils/user.util')
  * @param {number} driverId
  */
 async function startTripFor(driverId) {
-    const fleet = await Fleet.create({ name: 'Grãos Triângulo', baseRegion: 'Uberlândia, MG' })
+    const { user: manager } = await createTestUser('manager')
+    const fleet = await Fleet.create({ managerId: manager.id, name: 'Grãos Triângulo', baseRegion: 'Uberlândia, MG' })
     const vehicle = await Vehicle.create({
         fleetId: fleet.id,
         plate: `T${String(Date.now()).slice(-6)}`,

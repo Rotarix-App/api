@@ -15,6 +15,7 @@ The state of this checkout, last updated 2026-11-04. It doesn't cover other repo
 | 2026-10-20 | Removed `users.fleet_id` at the user's request: a driver's fleet is now derived from their vehicle assignments, a single source of truth. Updated the model, associations, anonymization, `db.sql`, the Swagger `User` schema, the ERD (source, PNG, SVG) and the docs. |
 | 2026-11-03 | On the `Frotas` branch, a teammate built the **fleets** module (S06–S08, M01–M03; RF04, RN02, RN05, D10–D13, D23): 8 manager-only endpoints, Swagger, 115 integration tests and 3 unit tests for `SchemaParserMiddleware`, which now validates path params. The test setup now accepts only `rotarix_test`. |
 | 2026-11-04 | At the user's request, reviewed and fixed the `Frotas` branch. Restored `.env.test` and the docs that described one developer's machine. Removed D27–D31, which hadn't been confirmed by the user, and put their content back as open questions and proposals (P07 stays open). Added `tripDriver` to the fleet's vehicle rows (S08 shows who is driving), moved the id param schema to `utils/schemas.js` and formatted the fleet controller and vehicle repository like the reference module. **149 tests passed** against `rotarix_test` on the user's local MariaDB 11.7. |
+| 2026-11-04 | The user decided D27 (resolves P07): a manager only accesses the fleets they created. Added `fleets.manager_id` (FK users) to the model, `db.sql` (now `users` is created before `fleets`) and `der.mmd`; every fleet endpoint is scoped to the signed-in manager, and another manager's fleet gives 404. **157 tests passed** on the user's local MariaDB 11.7. `der.png` and `der.svg` weren't regenerated (the Mermaid CLI run wasn't allowed in that session). Opened P23 (a deleted manager's fleets) and narrowed P06. |
 
 ## What exists
 
@@ -45,13 +46,12 @@ The state of this checkout, last updated 2026-11-04. It doesn't cover other repo
 | High | `private.auth.middleware.js` checks only for a localhost IP, so behind a reverse proxy on the same host every request passes. No route uses it yet. |
 | Medium | JWTs can't be revoked. After a password change or logout, old tokens stay valid until they expire (7 days). Deleted and deactivated users are still rejected, because the middleware reloads the user. |
 | Medium | There's no rate limiting on `POST /login`. |
-| High | Anyone can sign up as a manager (`POST /register`), and every manager can edit, deactivate and delete every fleet (P07 assumption). Needs an answer to P06/P07 before release. |
 | Low | `src/index.js` calls `console.clear()` on import, and dotenv 17 logs an "injected env" line for each test file. `express.static('./src/app/public')` points to a folder that doesn't exist. `@jest/test-sequencer` is in `dependencies` instead of `devDependencies`. |
 | Info | There's no evidence of TLS or recovery. The production URL in Swagger is configuration only. |
 
 ## Validation and limits
 
-- `npm test`: 149 tests passed on 2026-11-04 on the `Frotas` branch, against `rotarix_test` on the user's local MariaDB 11.7 (a Windows service, not the Docker MySQL 8) with the credentials from `.env`. CI (MySQL 8) hasn't been observed for this branch.
+- `npm test`: 157 tests passed on 2026-11-04 on the `Frotas` branch (after D27), against `rotarix_test` on the user's local MariaDB 11.7 (a Windows service, not the Docker MySQL 8) with the credentials from `.env`. CI (MySQL 8) hasn't been observed for this branch.
 - `npm test`: 31 tests passed on 2026-10-20, against `rotarix_test` on the user's local MySQL with the credentials from `.env`.
 - The Swagger annotations parse (`swagger-jsdoc`, `failOnErrors`).
 - The HTTP server wasn't started, and the app wasn't tested with the mobile client.
@@ -60,7 +60,7 @@ The state of this checkout, last updated 2026-11-04. It doesn't cover other repo
 
 This is a recommendation, not an approved schedule. The user sets the priorities. Location tracking, chat and offline mode aren't included by inference.
 
-1. Answer P07 (managers, companies and ownership, together with the rest of P06), P12 (finishing a trip after the driver is deactivated), P17–P19 (how maintenance and fuel count as expenses, and the vehicle for records outside a trip) and P22 (account deletion during a trip). Get the missing flows designed (P20). Record whether the client validated the prototype (P16).
+1. Answer P06 (which drivers a manager sees), P23 (a deleted manager's fleets), P12 (finishing a trip after the driver is deactivated), P17–P19 (how maintenance and fuel count as expenses, and the vehicle for records outside a trip) and P22 (account deletion during a trip). Get the missing flows designed (P20). Record whether the client validated the prototype (P16).
 2. Approve the data model (`data-model.md`) and the auth choices listed in `decisions.md`.
 3. Build fleets, vehicles, drivers (including manager-created drivers) and assignments (S06–S14, M01–M09), with permission tests and the effects of deactivation and deletion (D11–D13, D24).
 4. Build image storage, then trips and odometer readings (S25–S30, M12–M13, M18; RN06–RN08, D20), with concurrency safety and mandatory photos.

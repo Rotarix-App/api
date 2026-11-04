@@ -29,6 +29,7 @@ The physical schema, derived from what the prototype shows and collects (`protot
 | Column | Type | Null | Notes |
 |---|---|---|---|
 | id | INT | — | PK |
+| manager_id | INT | — | FK users. The manager who created the fleet; only they access it (D27) |
 | name | VARCHAR(100) | — | |
 | base_region | VARCHAR(120) | — | One field, "Base ou região" (D10) |
 | description | VARCHAR(255) | ✓ | Optional |
@@ -201,6 +202,7 @@ The prototype shows these alerts but has no screen to configure them.
 
 | From | To | Cardinality | Column |
 |---|---|---|---|
+| users | fleets | 1 – N | fleets.manager_id |
 | fleets | vehicles | 0..1 – N | vehicles.fleet_id |
 | users (drivers) | vehicles | N – M | vehicle_assignments (the driver's fleet is derived from it) |
 | users | photos | 1 – N | photos.uploaded_by |
@@ -218,7 +220,7 @@ The prototype shows these alerts but has no screen to configure them.
 
 ## Assumptions to confirm
 
-- **P07: one company.** No `companies` table: every manager sees every fleet, and a self-registered driver shows up in the managers' driver list (which also answers the rest of P06). The prototype never collects company data. If the answer turns out to be multi-company, add `companies` plus `company_id` on `users` and `fleets`; it's an additive change.
+- **One company.** No `companies` table. Fleets belong to the manager who created them (D27), but drivers don't belong to any manager (P06). The prototype never collects company data.
 - **P17 and P18:** refuelings and maintenances are separate tables, so how they count in the spend categories is a reporting rule that can change without touching the schema.
 - **P09:** `service_reminders` is a proposal.
 - **Timestamps:** `DATETIME` columns managed by Sequelize replace the BIGINT unix-ms template that was in the scaffold's `db.sql`.

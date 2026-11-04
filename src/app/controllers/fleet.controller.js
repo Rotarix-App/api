@@ -58,7 +58,7 @@ class FleetController {
      * @param {express.Response} res
      */
     async index(req, res) {
-        const fleets = await FleetService.list(req.query)
+        const fleets = await FleetService.list(req.user.id, req.query)
         if (fleets.error) return utils.sendError(res, fleets)
 
         return res.status(200).json({
@@ -74,7 +74,7 @@ class FleetController {
      * @param {express.Response} res
      */
     async show(req, res) {
-        const fleet = await FleetService.findById(req.params.id)
+        const fleet = await FleetService.findById(req.params.id, req.user.id)
         if (fleet.error) return utils.sendError(res, fleet)
 
         return res.status(200).json({
@@ -90,7 +90,7 @@ class FleetController {
      * @param {express.Response} res
      */
     async store(req, res) {
-        const fleet = await FleetService.create(req.body)
+        const fleet = await FleetService.create(req.user.id, req.body)
         if (fleet.error) return utils.sendError(res, fleet)
 
         return res.status(201).json({
@@ -106,7 +106,7 @@ class FleetController {
      * @param {express.Response} res
      */
     async update(req, res) {
-        const fleet = await FleetService.update(req.params.id, req.body)
+        const fleet = await FleetService.update(req.params.id, req.user.id, req.body)
         if (fleet.error) return utils.sendError(res, fleet)
 
         return res.status(200).json({
@@ -122,7 +122,7 @@ class FleetController {
      * @param {express.Response} res
      */
     async changeStatus(req, res) {
-        const fleet = await FleetService.changeStatus(req.params.id, req.body.status)
+        const fleet = await FleetService.changeStatus(req.params.id, req.user.id, req.body.status)
         if (fleet.error) return utils.sendError(res, fleet)
 
         return res.status(200).json({
@@ -138,7 +138,7 @@ class FleetController {
      * @param {express.Response} res
      */
     async destroy(req, res) {
-        const result = await FleetService.destroy(req.params.id, req.body.confirmationName)
+        const result = await FleetService.destroy(req.params.id, req.user.id, req.body.confirmationName)
         if (result.error) return utils.sendError(res, result)
 
         return res.status(200).json({
@@ -154,7 +154,7 @@ class FleetController {
      * @param {express.Response} res
      */
     async vehicles(req, res) {
-        const vehicles = await FleetService.listVehicles(req.params.id)
+        const vehicles = await FleetService.listVehicles(req.params.id, req.user.id)
         if (vehicles.error) return utils.sendError(res, vehicles)
 
         return res.status(200).json({
@@ -170,7 +170,7 @@ class FleetController {
      * @param {express.Response} res
      */
     async drivers(req, res) {
-        const drivers = await FleetService.listDrivers(req.params.id)
+        const drivers = await FleetService.listDrivers(req.params.id, req.user.id)
         if (drivers.error) return utils.sendError(res, drivers)
 
         return res.status(200).json({
