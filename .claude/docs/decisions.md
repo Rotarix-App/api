@@ -16,6 +16,10 @@ Started 2026-10-18. Every entry here is either stated in the official sources, c
 | — | 2026-10-20 | A driver's fleet is **derived from their vehicle assignments** (`vehicle_assignments → vehicles.fleet_id`), not stored: `users` has no `fleet_id`. "One driver, one fleet" (D13) is a rule the service enforces when assignments are saved. |
 | **D09** | 2026-10-20 | **The Figma prototype "Rotarix — Protótipo Mobile" (v1.0, 2026-09-26) is the source of truth for functionality**: screens, flows, fields and behavior. Where the official documents diverge, follow the prototype. The official documents still govern non-functional requirements and any rule the prototype doesn't contradict. See [`prototype.md`](prototype.md). |
 | **D27** | 2026-11-04 | **A manager only accesses the fleets they created.** Each fleet belongs to the manager who creates it (`fleets.manager_id`). Another manager can't see, edit, deactivate or delete it; the API answers 404, as for any resource that belongs to someone else. |
+| **D28** | 2026-11-04 | **Deleting a fleet deletes its vehicles too** (soft delete, so trips, expenses, readings and photos stay in history) and removes their assignments. It's blocked with 409 while any of its vehicles is on a trip. No vehicle is ever left without a fleet. Changes D11, D12 and the M03 text ("ficam sem frota"). |
+| **D29** | 2026-11-04 | **Deactivating a fleet makes its vehicles unavailable without changing their own status.** While the fleet is inactive its vehicles can't start trips; when it's reactivated, each vehicle is back to its own status, including those deactivated separately. |
+| **D30** | 2026-11-04 | **Deleting a vehicle on a trip is blocked**, like deactivating it (M05). Resolves part of P20. |
+| **D31** | 2026-11-04 | **The manager can only raise a vehicle's odometer when editing it.** A higher value is recorded as a manual reading; a lower one is rejected (RN07); changing it during a trip is blocked. |
 
 ## From the official sources
 
@@ -37,8 +41,8 @@ Screen references (Sxx and Mxx) are explained in [`prototype.md`](prototype.md).
 | ID | Decision | Prototype | Resolves or changes |
 |---|---|---|---|
 | D10 | A fleet has a name, **one** "base or region" field and an optional description. The fleet list has search by name, a status filter, and vehicle, driver and on-trip counts. | S06–S07 | Changes RF04 (base and region were two fields) |
-| D11 | A fleet is required when creating or editing a vehicle. A vehicle becomes fleetless only when its fleet is deleted, which also removes the assignments. | S09, M03 | P01 |
-| D12 | No link ever blocks deletion. Deleting a fleet unlinks its vehicles and removes assignments; deleting a vehicle keeps its trips, expenses and photos; deleting a driver anonymizes them. Only **deactivating** a vehicle during a trip is blocked. | M03, M05, M06, M09 | P02 |
+| D11 | A fleet is required when creating or editing a vehicle. A vehicle becomes fleetless only when its fleet is deleted, which also removes the assignments. **Changed by D28:** deleting a fleet deletes its vehicles. | S09, M03 | P01 |
+| D12 | No link ever blocks deletion. Deleting a fleet unlinks its vehicles and removes assignments; deleting a vehicle keeps its trips, expenses and photos; deleting a driver anonymizes them. Only **deactivating** a vehicle during a trip is blocked. **Changed by D28 and D30:** deleting a fleet or a vehicle is blocked during a trip, and deleting a fleet deletes its vehicles. | M03, M05, M06, M09 | P02 |
 | D13 | A driver is assigned to **one fleet at a time** and to one or more of its vehicles. A vehicle can have several drivers. Inactive fleets can't be chosen. Saving is the confirmation. The fleet is derived from the assigned vehicles, not stored (2026-10-20). | S11, S13, S14 | Narrows RF07 |
 | D14 | Drivers can sign up themselves (S03) or be created by a manager with a **temporary password** that they change later (S12). After creating a driver, the manager goes straight to assignments. | S03, S12 | Partly P06 |
 | D15 | Drivers edit their own name, email, phone, CNH number and CNH category. Managers edit their own name, email and phone. Managers also edit driver data through the driver form. | S20, S37, M07 | P05; changes RF03 |
@@ -73,9 +77,21 @@ The repository uses Node.js/CommonJS, Express 5, Sequelize, Zod, JWT/bcryptjs an
   - A fleet belongs to its creator (D27). `managerId` is set from the token and can't be sent in the body.
   - The list filter defaults to `all`. The name search is a literal, case-insensitive substring.
   - Counts exclude soft-deleted vehicles and users, and count drivers once per fleet. `onTripCount` counts vehicles with a trip in progress.
-  - Deleting needs `confirmationName` equal to the stored name, case and spaces included (`400 fleet_name_confirmation_mismatch`). It locks the fleet row, deletes the assignments of all its vehicles (soft-deleted ones too), then deletes the fleet; the FK sets `vehicles.fleet_id` to NULL.
+  - Deleting needs `confirmationName` equal to the stored name, case and spaces included (`400 fleet_name_confirmation_mismatch`). It locks the fleet row and its vehicles, answers `409 fleet_has_trip_in_progress` if any is on a trip, deletes their assignments (soft-deleted vehicles too), soft-deletes the vehicles and deletes the fleet (D28).
   - Vehicle rows return every assigned driver (`assignedDrivers`) plus the driver of the trip in progress (`tripDriver`), which S08 shows.
+  - Vehicle rows also return `available`.
   - `SchemaParserMiddleware` takes a third argument for path params and a `stringQueryFields` option that keeps numeric-looking query values (a search for "00123") as text.
+- **Choices made while building vehicles** (`feat/vehicles` branch, applied; review them):
+  - Routes: `POST /vehicles`; `GET`, `PUT` and `DELETE /vehicles/:id`; `PATCH /vehicles/:id/status`. All manager-only. There's no vehicle list: S08 uses `GET /fleets/:id/vehicles`.
+  - A vehicle is reachable only through a fleet of the signed-in manager (D27); otherwise 404 `vehicle_not_found`. A `fleetId` from another manager gives 404 `fleet_not_found`.
+  - The plate is stored upper case without the hyphen and must match the old or the Mercosul format. A duplicate gives 409 `plate_already_exists`.
+  - Year from 1950 to next year; odometer from 0 to 9,999,999 km. The initial odometer is recorded as a manual reading without a photo.
+  - A vehicle can be created in, or moved to, an inactive fleet of the same manager; it's then unavailable (D29). Moving it removes its assignments and is blocked during a trip (`409 vehicle_on_trip`).
+  - Deactivating keeps the assignments. Reactivation uses the same endpoint (P20).
+  - Deleting needs `confirmationPlate` (case, spaces and hyphen ignored; `400 plate_confirmation_mismatch`) and removes the assignments.
+  - The `vehicle_on_trip` message names the driver and the start time in Brasília time, as in M05.
+  - `available` = active vehicle, active fleet and no trip in progress. The trips module must use the same rule.
+  - Writes lock the fleet(s) first, in id order, then the vehicle. The ownership lookup runs before the transaction, because MariaDB 11.7 (`innodb_snapshot_isolation`) rejects a locking read of a row that changed after the transaction's first plain read.
 - **Choices made while building auth and users** (applied; review them):
   - Error objects carry `httpStatus` (`utils.error`), and controllers send them with `utils.sendError`.
   - Routes: `POST /register` and `POST /login` (both return `{ token, user }`); `GET`, `PUT` and `DELETE /users/@me`; `PUT /users/@me/password`.
@@ -94,6 +110,6 @@ When the user answers an open question (see [`requirements-analysis.md`](require
 
 | ID | Date | Decision | Confirmed by | Resolves |
 |---|---|---|---|---|
-| D28 | YYYY-MM-DD | … | user | Pxx |
+| D32 | YYYY-MM-DD | … | user | Pxx |
 
 Then update the rules and docs it affects, and set the question's status to **Resolved → Dxx**. If the prototype changes, update [`prototype.md`](prototype.md) and review D10–D26.

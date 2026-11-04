@@ -35,7 +35,7 @@ The physical schema, derived from what the prototype shows and collects (`protot
 | description | VARCHAR(255) | ✓ | Optional |
 | status | ENUM active, inactive | — | Default active |
 
-Fleets are hard-deleted. `vehicles.fleet_id` becomes NULL, and the service deletes the assignments to the fleet's vehicles (D12).
+Fleets are hard-deleted. The service first soft-deletes the fleet's vehicles and deletes their assignments (D28), so the FK only sets `fleet_id` to NULL on vehicles that are already deleted. A fleet with a vehicle on a trip can't be deleted.
 
 ### users (S02–S03, S11–S13, S19–S20, S36–S37)
 

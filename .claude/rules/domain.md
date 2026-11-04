@@ -50,13 +50,15 @@ A manager only accesses the fleets they created (D27), and so only their vehicle
 
 ## Lifecycle rules
 
-- **Fleet** (RF04, D10, D12).
-  - Fields: name, **one "base or region" field**, optional description.
-  - Deactivating blocks new trips but keeps vehicles, drivers and history; the fleet can be reactivated.
-  - Deleting requires typing the fleet name and can't be undone. It leaves the fleet's vehicles without a fleet and removes the assignments; trips and expenses are kept.
-- **Vehicle** (RF05, D11, D12).
-  - Fields: plate, brand, model, year, current odometer, fleet.
-  - It can't be deactivated during a trip.
+- **Fleet** (RF04, D10, D12, D27–D29).
+  - Fields: name, **one "base or region" field**, optional description. It belongs to the manager who created it.
+  - Deactivating blocks new trips but keeps vehicles, drivers and history; the fleet can be reactivated. Its vehicles keep their own status but are unavailable while it's inactive (D29).
+  - Deleting requires typing the fleet name and can't be undone. It deletes the fleet's vehicles too (history kept) and removes their assignments; it's blocked while any of its vehicles is on a trip (D28).
+- **Vehicle** (RF05, D11, D12, D28–D31).
+  - Fields: plate, brand, model, year, current odometer, fleet. It's always in a fleet of its manager.
+  - Available = active vehicle, active fleet and no trip in progress.
+  - Moving it to another fleet removes its assignments. Moving it, changing its odometer, deactivating it and deleting it are blocked during a trip (D30, D31).
+  - The manager can only raise the odometer, which records a manual reading (D31).
   - Deleting requires typing the plate. The vehicle disappears for drivers, while its trips, expenses and photos are kept.
   - Service alerts come from odometer readings ("Revisão em 800 km", "Troca de óleo vencida há 420 km"). Where they're configured is undefined (P09).
 - **Driver** (RF06, D14, D24).

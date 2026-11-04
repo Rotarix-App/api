@@ -26,7 +26,7 @@ The reference implementation is `src/tests/entrypoints/auth/auth.test.js`, `user
   ```
 
 - **CI** (`.github/workflows/test.yml`) starts a MySQL 8 service and runs `npm test` with `MYSQL_DATABASE=rotarix_test`; `globalSetup` builds the schema.
-- The custom sequencer `src/tests/sequencer.js` runs the files in its `order` array first (currently `auth.test.js`, `users.test.js`, `fleets.test.js`), then the rest alphabetically. Add each new domain's file in dependency order. Tests must still pass in any order.
+- The custom sequencer `src/tests/sequencer.js` runs the files in its `order` array first (currently `auth.test.js`, `users.test.js`, `fleets.test.js`, `vehicles.test.js`), then the rest alphabetically. Add each new domain's file in dependency order. Tests must still pass in any order.
 
 ## Structure
 

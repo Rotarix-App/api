@@ -16,6 +16,7 @@ The state of this checkout, last updated 2026-11-04. It doesn't cover other repo
 | 2026-11-03 | On the `Frotas` branch, a teammate built the **fleets** module (S06–S08, M01–M03; RF04, RN02, RN05, D10–D13, D23): 8 manager-only endpoints, Swagger, 115 integration tests and 3 unit tests for `SchemaParserMiddleware`, which now validates path params. The test setup now accepts only `rotarix_test`. |
 | 2026-11-04 | At the user's request, reviewed and fixed the `Frotas` branch. Restored `.env.test` and the docs that described one developer's machine. Removed D27–D31, which hadn't been confirmed by the user, and put their content back as open questions and proposals (P07 stays open). Added `tripDriver` to the fleet's vehicle rows (S08 shows who is driving), moved the id param schema to `utils/schemas.js` and formatted the fleet controller and vehicle repository like the reference module. **149 tests passed** against `rotarix_test` on the user's local MariaDB 11.7. |
 | 2026-11-04 | The user decided D27 (resolves P07): a manager only accesses the fleets they created. Added `fleets.manager_id` (FK users) to the model, `db.sql` (now `users` is created before `fleets`) and `der.mmd`; every fleet endpoint is scoped to the signed-in manager, and another manager's fleet gives 404. **157 tests passed** on the user's local MariaDB 11.7. `der.png` and `der.svg` weren't regenerated (the Mermaid CLI run wasn't allowed in that session). Opened P23 (a deleted manager's fleets) and narrowed P06. |
+| 2026-11-04 | On `feat/vehicles`, at the user's request: the manager's **vehicles** module (S09–S10, M04–M06) with `POST /vehicles` and `GET`, `PUT`, `PATCH .../status` and `DELETE /vehicles/:id`, the odometer-reading repository, Swagger and 83 integration tests; one more fleet test covers the blocked deletion. The user decided D28–D31: deleting a fleet now deletes its vehicles and is blocked during a trip; an inactive fleet makes its vehicles unavailable; deleting a vehicle on a trip is blocked; the odometer can only go up. `GET /fleets/:id/vehicles` now returns `available`. **241 tests passed** three times in a row on the user's local MariaDB 11.7. |
 
 ## What exists
 
@@ -32,7 +33,8 @@ The state of this checkout, last updated 2026-11-04. It doesn't cover other repo
 ## Missing
 
 - The fleet Resumo tab (S08, fleet-scoped metrics), which depends on trips and expenses.
-- Every domain except accounts and fleets: vehicles, drivers and assignments, trips, odometer readings, expenses, refueling, maintenance, service alerts, metrics and the activity feed.
+- The vehicle service alert (S10), which waits for P09. The driver's vehicle views (S23–S24) belong to the driver views.
+- Every domain except accounts, fleets and the manager's vehicles: drivers and assignments, trips, odometer readings, expenses, refueling, maintenance, service alerts, metrics and the activity feed.
 - Image uploads and storage (RNF05, RN08).
 - Managers creating drivers with a temporary password (S12). It belongs to the drivers module, not to sign-up.
 - No React Native/Expo app in this checkout.
@@ -51,6 +53,7 @@ The state of this checkout, last updated 2026-11-04. It doesn't cover other repo
 
 ## Validation and limits
 
+- `npm test`: 241 tests passed three times on 2026-11-04 on `feat/vehicles`, against `rotarix_test` on the user's local MariaDB 11.7 with the credentials from `.env`. CI (MySQL 8) hasn't been observed for this branch.
 - `npm test`: 157 tests passed on 2026-11-04 on the `Frotas` branch (after D27), against `rotarix_test` on the user's local MariaDB 11.7 (a Windows service, not the Docker MySQL 8) with the credentials from `.env`. CI (MySQL 8) hasn't been observed for this branch.
 - `npm test`: 31 tests passed on 2026-10-20, against `rotarix_test` on the user's local MySQL with the credentials from `.env`.
 - The Swagger annotations parse (`swagger-jsdoc`, `failOnErrors`).

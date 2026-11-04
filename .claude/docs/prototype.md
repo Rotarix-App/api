@@ -39,7 +39,7 @@ The Figma prototype is the **source of truth for functionality** (screens, flows
 - **Fleet screen (S08):** tabs Veículos, Motoristas and Resumo. Resumo shows fleet-scoped metrics. Each vehicle row shows its status, plate, model, year, a driver name and the odometer. There's an "Adicionar veículo" button.
 - **Actions (M01):** edit, deactivate or delete.
 - **Deactivate (M02):** the fleet stops being offered for new trips. Vehicles, drivers and history stay, and the fleet can be reactivated. The reactivate action itself isn't drawn (P20).
-- **Delete (M03):** requires typing the fleet name and can't be undone. Its vehicles are left without a fleet, the assignments of its drivers are removed, and trips and expenses are kept.
+- **Delete (M03):** requires typing the fleet name and can't be undone. Its vehicles are left without a fleet, the assignments of its drivers are removed, and trips and expenses are kept. **The API differs (D28):** the vehicles are deleted with the fleet, and deletion is blocked during a trip, so the modal text needs updating.
 
 ### Vehicles (S09–S10, M04–M06, M20)
 
