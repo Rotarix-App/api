@@ -259,7 +259,7 @@ describe('PUT /fleets/:id', () => {
     })
 
     describe('success', () => {
-        test('Should let another manager view, edit, change status and delete a fleet (P07 assumption)', async () => {
+        test('Should let another manager view, edit, change status and delete a fleet', async () => {
             const created = await call('post', '/fleets', { name: 'Shared Fleet', baseRegion: 'MG' })
             const id = created.body.data.id
             expect((await call('get', `/fleets/${id}`, undefined, otherManager.token)).status).toBe(200)
