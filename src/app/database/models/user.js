@@ -56,6 +56,7 @@ const User = connection.define('User', {
 
 User.prototype.toJSON = function () {
     const values = { ...this.get() }
+    if (values.deletedAt) return { name: 'Motorista removido' }
 
     delete values.passwordHash
     delete values.deletedAt

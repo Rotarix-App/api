@@ -1,12 +1,24 @@
 const jwt = require('jsonwebtoken')
 const bcrypt = require('bcryptjs')
 const UserRepository = require('../repositories/user.repository')
+const TripRepository = require('../repositories/trip.repository')
 const utils = require('../utils')
 
 const TOKEN_EXPIRATION = '7d'
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync('rotarix-dummy-password', 10)
 
 class AuthService {
+    /**
+     * @param {{ id: number, role: string }} user
+     * @param {number} tripId
+     */
+    async canCompleteTrip(user, tripId) {
+        if (user.role !== 'driver' || !Number.isSafeInteger(tripId) || tripId < 1) return false
+        const trip = await TripRepository.findInProgressByDriverId(user.id)
+        if (trip?.error) return trip
+        return !!trip && trip.id === tripId
+    }
+
     /**
      * @param {{ role: 'manager' | 'driver', name: string, email: string, phone: string, password: string, cnhNumber?: string, cnhCategory?: string }} data
      */

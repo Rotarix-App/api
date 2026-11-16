@@ -28,6 +28,211 @@ const options = {
                 },
             },
             schemas: {
+                DriverInput: {
+                    type: 'object',
+                    required: [
+                        'name',
+                        'email',
+                        'phone',
+                        'cnhNumber',
+                        'cnhCategory'
+                    ],
+                    properties: {
+                        name: {
+                            type: 'string',
+                            minLength: 3,
+                            maxLength: 120
+                        },
+                        email: {
+                            type: 'string',
+                            format: 'email',
+                            maxLength: 160
+                        },
+                        phone: {
+                            type: 'string',
+                            pattern: '^[0-9]{10,11}$'
+                        },
+                        cnhNumber: {
+                            type: 'string',
+                            pattern: '^[0-9]{11}$'
+                        },
+                        cnhCategory: {
+                            type: 'string',
+                            enum: [
+                                'B',
+                                'C',
+                                'D',
+                                'E'
+                            ]
+                        }
+                    }
+                },
+                DriverCreateInput: {
+                    allOf: [
+                        {
+                            '$ref': '#/components/schemas/DriverInput'
+                        },
+                        {
+                            type: 'object',
+                            required: [
+                                'password'
+                            ],
+                            properties: {
+                                password: {
+                                    type: 'string',
+                                    format: 'password',
+                                    minLength: 8,
+                                    maxLength: 72,
+                                    description: 'Temporary password, upper/lower case and a digit.'
+                                }
+                            }
+                        }
+                    ]
+                },
+                DriverDeleteInput: {
+                    type: 'object',
+                    required: [
+                        'confirmation'
+                    ],
+                    properties: {
+                        confirmation: {
+                            type: 'string',
+                            enum: [
+                                'EXCLUIR'
+                            ]
+                        }
+                    }
+                },
+                DriverStatusInput: {
+                    type: 'object',
+                    required: [
+                        'status'
+                    ],
+                    properties: {
+                        status: {
+                            type: 'string',
+                            enum: [
+                                'active',
+                                'inactive'
+                            ]
+                        }
+                    }
+                },
+                DriverAssignmentInput: {
+                    type: 'object',
+                    required: [
+                        'fleetId',
+                        'vehicleIds'
+                    ],
+                    properties: {
+                        fleetId: {
+                            type: 'integer',
+                            minimum: 1,
+                            maximum: 2147483647
+                        },
+                        vehicleIds: {
+                            type: 'array',
+                            minItems: 1,
+                            uniqueItems: true,
+                            items: {
+                                type: 'integer',
+                                minimum: 1,
+                                maximum: 2147483647
+                            }
+                        }
+                    }
+                },
+                Driver: {
+                    allOf: [
+                        {
+                            '$ref': '#/components/schemas/DriverInput'
+                        },
+                        {
+                            type: 'object',
+                            properties: {
+                                id: {
+                                    type: 'integer'
+                                },
+                                status: {
+                                    type: 'string',
+                                    enum: [
+                                        'active',
+                                        'inactive'
+                                    ]
+                                },
+                                tripStatus: {
+                                    type: 'string',
+                                    enum: [
+                                        'free',
+                                        'in_progress',
+                                        'inactive'
+                                    ]
+                                },
+                                fleet: {
+                                    type: 'object',
+                                    nullable: true,
+                                    properties: {
+                                        id: {
+                                            type: 'integer'
+                                        },
+                                        name: {
+                                            type: 'string'
+                                        },
+                                        status: {
+                                            type: 'string',
+                                            enum: [
+                                                'active',
+                                                'inactive'
+                                            ]
+                                        }
+                                    }
+                                },
+                                assignedVehicles: {
+                                    type: 'array',
+                                    items: {
+                                        type: 'object',
+                                        properties: {
+                                            id: {
+                                                type: 'integer'
+                                            },
+                                            plate: {
+                                                type: 'string'
+                                            },
+                                            brand: {
+                                                type: 'string'
+                                            },
+                                            model: {
+                                                type: 'string'
+                                            },
+                                            status: {
+                                                type: 'string',
+                                                enum: [
+                                                    'active',
+                                                    'inactive'
+                                                ]
+                                            },
+                                            tripStatus: {
+                                                type: 'string',
+                                                enum: [
+                                                    'free',
+                                                    'in_progress'
+                                                ]
+                                            }
+                                        }
+                                    }
+                                },
+                                createdAt: {
+                                    type: 'string',
+                                    format: 'date-time'
+                                },
+                                updatedAt: {
+                                    type: 'string',
+                                    format: 'date-time'
+                                }
+                            }
+                        }
+                    ]
+                },
                 FleetInput: {
                     type: 'object',
                     required: ['name', 'baseRegion'],

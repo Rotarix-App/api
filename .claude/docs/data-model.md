@@ -2,7 +2,7 @@
 
 The physical schema, derived from what the prototype shows and collects (`prototype.md`, D09), plus basic control fields. Written 2026-10-20.
 
-- **Status:** the models and `data/db.sql` exist; the schema has never been run against a database.
+- **Status:** the schema has been exercised by the guarded test setup against rotarix_test; development databases are not reset automatically.
 - **Approval:** the schema is a proposal until the user approves it. The assumptions are listed [at the end](#assumptions-to-confirm).
 
 | Artifact | Path |
@@ -39,6 +39,8 @@ Fleets are hard-deleted. The service first soft-deletes the fleet's vehicles and
 
 ### users (S02–S03, S11–S13, S19–S20, S36–S37)
 
+D38 supersedes the direct relationship introduced by D32: users has no manager_id or fleet_id. The shared driver registry includes users with no assignments. Keep fleets.manager_id (D27). For an already initialized schema containing the obsolete column, review [the separate migration](../../data/migrations/2026-11-11-remove-driver-manager.sql); it is not executed automatically.
+
 | Column | Type | Null | Notes |
 |---|---|---|---|
 | id | INT | — | PK |
@@ -58,7 +60,7 @@ Fleets are hard-deleted. The service first soft-deletes the fleet's vehicles and
 - Replace `password_hash` with a random hash.
 - Clear `phone`, `cnh_number` and `cnh_category`, and delete the user's assignments.
 
-Trips and records keep pointing at the row. Paranoid queries hide it, so history shows no identification.
+Trips and records keep pointing at the row. Current-profile queries exclude deleted rows; historical joins use `UserHistory.include(User)` (`paranoid: false`) and `UserHistory.present` to expose only `{ name: 'Motorista removido' }`, without id/contact/CNH (D37). Photos remain; storage keys must not contain personal data. Information printed inside receipts/invoices remains open (P14).
 
 This is implemented in `UserRepository.anonymize`, which `UserService.deleteAccount` runs in a transaction together with removing the assignments. The email placeholder frees the original email for a new sign-up. `User.prototype.toJSON` hides `passwordHash` and `deletedAt` in every response.
 
@@ -220,7 +222,7 @@ The prototype shows these alerts but has no screen to configure them.
 
 ## Assumptions to confirm
 
-- **One company.** No `companies` table. Fleets belong to the manager who created them (D27), but drivers don't belong to any manager (P06). The prototype never collects company data.
+- **One company (confirmed D38).** No `companies` table. Fleets belong to their creator (D27). Drivers are shared among managers, including unassigned drivers; neither manager_id nor fleet_id exists on users. D38 supersedes D32; operational links derive from assignments.
 - **P17 and P18:** refuelings and maintenances are separate tables, so how they count in the spend categories is a reporting rule that can change without touching the schema.
 - **P09:** `service_reminders` is a proposal.
 - **Timestamps:** `DATETIME` columns managed by Sequelize replace the BIGINT unix-ms template that was in the scaffold's `db.sql`.

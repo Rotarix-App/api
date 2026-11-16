@@ -13,13 +13,14 @@ The reference implementation is `src/tests/entrypoints/auth/auth.test.js`, `user
 ## Setup
 
 - The stack is Jest 30 with Supertest. `npm test` runs `jest --runInBand`. Every run needs MySQL.
+- Each integration test may build multiple bcrypt-backed accounts and make several HTTP requests. Jest allows 15 seconds per test and per database lifecycle hook; this is a fixture/workflow timeout, not a claim that individual API requests meet RNF01. Password hashing cost and all assertions remain unchanged.
 - `globalSetup` (`src/tests/setup/database.js`):
   - recreates the test database from `data/db.sql` before every run;
   - **refuses to run unless `MYSQL_DATABASE` is exactly `rotarix_test`**, before it opens a connection;
   - rewrites only the `DROP`, `CREATE` and `USE` statements, so `rotarix` itself is never touched.
 - `setupFilesAfterEnv` (`src/tests/setup/global.js`) exposes the Express app as `global.app`. After each file it waits for `connection.ready` and closes the Sequelize connection; without that wait, fast files tear down mid-handshake and the run exits with code 1.
-- Jest sets `NODE_ENV=test`, so `.env.test` is loaded (`rotarix_test`, root/root on localhost:3306), the HTTP server doesn't start, and the request logger is off.
-- **Local MySQL with other credentials:** variables that are already set win over `.env.test`. The user authorized `rotarix_test` on their local MySQL (2026-10-20). To use the credentials from `.env` without printing them:
+- Jest sets `NODE_ENV=test`. `src/config/environment.js` is shared by setup/bootstrap: inherited variables win, followed by `.env.test.local` (ignored by Git), then `.env.test`. Paths are absolute from the repository root. Both loader/setup require exactly `rotarix_test`. The HTTP server and request logger are off. See [local database diagnosis](../docs/testing-database.md); never assume Compose credentials match a previously initialized server/volume.
+- **Local MySQL with other credentials:** use a private `.env.test.local` for the verified intended instance, or explicit environment variables. The user authorized recreating only `rotarix_test`. The legacy command below supplies explicit credentials without printing them; there is no automatic fallback to `.env`:
 
   ```bash
   ( set -a; eval "$(grep -E '^MYSQL_(HOST|PORT|USERNAME|PASSWORD)=' .env | tr -d '\r')"; set +a; MYSQL_DATABASE=rotarix_test npm test )

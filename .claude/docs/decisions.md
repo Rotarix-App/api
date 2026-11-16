@@ -4,22 +4,31 @@ Started 2026-10-18. Every entry here is either stated in the official sources, c
 
 ## Confirmed by the user
 
-| ID | Date | Decision |
-|---|---|---|
-| — | 2026-10-18 | Build persistent project memory from the three sources, keeping traceability and the official files intact. |
-| — | 2026-10-18 | Inspect the code without changing it. Implement features only after a later approval. |
-| — | 2026-10-18 | Ask for approval before major architectural decisions and destructive operations. |
-| — | 2026-10-20 | Consolidate the agent instructions, rules, skills and memory under `.claude/`, written in English. |
-| — | 2026-10-20 | Remove Socket.IO from the project. The API has no real-time channel; don't add one without asking. |
-| — | 2026-10-20 | Build the auth and users endpoints and repositories using `economix-api` (the user's earlier API) as the architectural reference, and update the skills to match. |
-| — | 2026-10-20 | Integration tests may recreate `rotarix_test` on the user's local MySQL. |
-| — | 2026-10-20 | A driver's fleet is **derived from their vehicle assignments** (`vehicle_assignments → vehicles.fleet_id`), not stored: `users` has no `fleet_id`. "One driver, one fleet" (D13) is a rule the service enforces when assignments are saved. |
-| **D09** | 2026-10-20 | **The Figma prototype "Rotarix — Protótipo Mobile" (v1.0, 2026-09-26) is the source of truth for functionality**: screens, flows, fields and behavior. Where the official documents diverge, follow the prototype. The official documents still govern non-functional requirements and any rule the prototype doesn't contradict. See [`prototype.md`](prototype.md). |
-| **D27** | 2026-11-04 | **A manager only accesses the fleets they created.** Each fleet belongs to the manager who creates it (`fleets.manager_id`). Another manager can't see, edit, deactivate or delete it; the API answers 404, as for any resource that belongs to someone else. |
-| **D28** | 2026-11-04 | **Deleting a fleet deletes its vehicles too** (soft delete, so trips, expenses, readings and photos stay in history) and removes their assignments. It's blocked with 409 while any of its vehicles is on a trip. No vehicle is ever left without a fleet. Changes D11, D12 and the M03 text ("ficam sem frota"). |
-| **D29** | 2026-11-04 | **Deactivating a fleet makes its vehicles unavailable without changing their own status.** While the fleet is inactive its vehicles can't start trips; when it's reactivated, each vehicle is back to its own status, including those deactivated separately. |
-| **D30** | 2026-11-04 | **Deleting a vehicle on a trip is blocked**, like deactivating it (M05). Resolves part of P20. |
-| **D31** | 2026-11-04 | **The manager can only raise a vehicle's odometer when editing it.** A higher value is recorded as a manual reading; a lower one is rejected (RN07); changing it during a trip is blocked. |
+D38 supersedes D32 and the direct manager/driver ownership and email-link transfer portions of D35. Historical entries below are retained; D13, D14, D24, D27 and D33–D37 remain valid as qualified by D38.
+
+| ID | Date | Decision | Confirmed by | Resolves |
+|---|---|---|---|---|
+| — | 2026-10-18 | Build persistent project memory from the three sources, keeping traceability and the official files intact. | user | - |
+| — | 2026-10-18 | Inspect the code without changing it. Implement features only after a later approval. | user | - |
+| — | 2026-10-18 | Ask for approval before major architectural decisions and destructive operations. | user | - |
+| — | 2026-10-20 | Consolidate the agent instructions, rules, skills and memory under `.claude/`, written in English. | user | - |
+| — | 2026-10-20 | Remove Socket.IO from the project. The API has no real-time channel; don't add one without asking. | user | - |
+| — | 2026-10-20 | Build the auth and users endpoints and repositories using `economix-api` (the user's earlier API) as the architectural reference, and update the skills to match. | user | - |
+| — | 2026-10-20 | Integration tests may recreate `rotarix_test` on the user's local MySQL. | user | - |
+| — | 2026-10-20 | A driver's fleet is **derived from their vehicle assignments** (`vehicle_assignments → vehicles.fleet_id`), not stored: `users` has no `fleet_id`. "One driver, one fleet" (D13) is a rule the service enforces when assignments are saved. | user | - |
+| **D09** | 2026-10-20 | **The Figma prototype "Rotarix — Protótipo Mobile" (v1.0, 2026-09-26) is the source of truth for functionality**: screens, flows, fields and behavior. Where the official documents diverge, follow the prototype. The official documents still govern non-functional requirements and any rule the prototype doesn't contradict. See [`prototype.md`](prototype.md). | user | - |
+| **D27** | 2026-11-04 | **A manager only accesses the fleets they created.** Each fleet belongs to the manager who creates it (`fleets.manager_id`). Another manager can't see, edit, deactivate or delete it; the API answers 404, as for any resource that belongs to someone else. | user | - |
+| **D28** | 2026-11-04 | **Deleting a fleet deletes its vehicles too** (soft delete, so trips, expenses, readings and photos stay in history) and removes their assignments. It's blocked with 409 while any of its vehicles is on a trip. No vehicle is ever left without a fleet. Changes D11, D12 and the M03 text ("ficam sem frota"). | user | - |
+| **D29** | 2026-11-04 | **Deactivating a fleet makes its vehicles unavailable without changing their own status.** While the fleet is inactive its vehicles can't start trips; when it's reactivated, each vehicle is back to its own status, including those deactivated separately. | user | - |
+| **D30** | 2026-11-04 | **Deleting a vehicle on a trip is blocked**, like deactivating it (M05). Resolves part of P20. | user | - |
+| **D31** | 2026-11-04 | **The manager can only raise a vehicle's odometer when editing it.** A higher value is recorded as a manual reading; a lower one is rejected (RN07); changing it during a trip is blocked. | user | - |
+| **D32** | 2026-11-06 | Each driver has a nullable responsible manager (users.manager_id); managers have NULL. S12 creation sets the creator; S03 self-registration leaves it NULL. Link only by exact email; no discovery of unlinked or other managers' drivers. Only the responsible manager lists, reads, edits, deactivates, reactivates or deletes the driver; other access returns 404 driver_not_found (D27). Assign only within their own fleets. | user | P06 |
+| **D33** | 2026-11-06 | An inactive driver with an ongoing trip retains a restricted session solely to finish or cancel that own trip. Both actions validate trip ownership, never assignments removed by D24. After completion/cancellation all access is blocked. | user | P12 |
+| **D34** | 2026-11-06 | Deleting driver data during an ongoing trip returns 409 driver_has_trip_in_progress. Deactivate, let the driver finish, then delete (D28, D30). | user | P22 (manager deletion only) |
+| **D35** | 2026-11-06 | Managers never change assignments in another manager's fleet. Transfer requires release (manager_id becomes NULL), then exact-email linking by the new manager. Release during an ongoing trip is blocked. Replacing assignments cannot remove the ongoing trip vehicle (409). | user | P12; RF07 |
+| **D36** | 2026-11-06 | Status changes are idempotent, like fleets and vehicles. Reactivation never restores assignments removed by D24; the driver is free without assignments. Soft-deleted drivers cannot be reactivated. | user | P20 (driver reactivation) |
+| **D37** | 2026-11-06 | Historical user joins include deleted users (paranoid: false), exposing only the placeholder "Motorista removido" for deleted drivers, never NULL or other fields. Photos are retained. Storage keys must never contain name, email, phone or CNH. Request logs retain no email or phone. | user | P14 (partly) |
+| **D38** | 2026-11-11 | **Shared driver registry for Transcarvalho.** Remove users.manager_id and responsibleManager/managedDrivers; do not add users.fleet_id or companies. Authenticated managers may create, list/search/filter, read, edit, deactivate/reactivate and anonymize any nondeleted driver, including unassigned self-registered drivers (RF01, RF06). Operational links derive from vehicle_assignments → vehicles.fleet_id → fleets.manager_id. Preserve D27 fleet ownership and D13 one fleet per driver. Only the manager of current assignments may replace/release them. Transfer between managers requires explicit release of old assignments, then assignment by the receiving manager; no direct email-link/manager endpoints. Keep active-fleet, same-fleet, nonempty, unique vehicle selection, transactions and trip protections (D35). Deactivation removes assignments globally as the RF06 lifecycle action (D24); it is distinct from operational transfer. Preserve D33 restricted own-trip completion/cancellation, D34 deletion block, D36 reactivation without restoring links and D37 anonymized history. | user | P06; supersedes D32 and direct-ownership parts of D35 |
 
 ## From the official sources
 
@@ -60,7 +69,7 @@ Screen references (Sxx and Mxx) are explained in [`prototype.md`](prototype.md).
 
 ## Technical evidence, not decisions
 
-The repository uses Node.js/CommonJS, Express 5, Sequelize, Zod, JWT/bcryptjs and Jest/Supertest, with the layered architecture described in `.claude/rules/architecture.md`. These came from the initial scaffolding. Only the auth and users module is implemented. See [`progress.md`](progress.md).
+The repository uses Node.js/CommonJS, Express 5, Sequelize, Zod, JWT/bcryptjs and Jest/Supertest, with the layered architecture described in `.claude/rules/architecture.md`. These came from the initial scaffolding. Auth/users, fleets, vehicles and drivers/assignments are implemented; see [`progress.md`](progress.md) for validation and limits.
 
 ## Not approved yet
 

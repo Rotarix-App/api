@@ -45,10 +45,12 @@ The reference implementation is `auth.routes.js`, `user.routes.js`, `auth.contro
 | `auth.middleware.js` | Requires `Authorization: Bearer <JWT>` and reloads the user on every request. Missing, invalid or expired token, or a deleted user: 401 `unauthorized`. Inactive user: 403 `account_inactive` (D24). On success it sets `req.user` (a Sequelize instance whose `toJSON` hides `passwordHash`). |
 | `role.middleware.js` | `roleMiddleware('manager')` or `roleMiddleware('manager', 'driver')`. Goes after `AuthMiddleware` and returns 403 `forbidden` for other roles (RN02). |
 | `schema.middleware.js` | `SchemaParserMiddleware(bodySchema, querySchema, paramsSchema, { stringQueryFields })`. Optional parameter validation writes parsed values to `req.params`. Scalar numeric-looking query values are converted to numbers except fields explicitly listed in `stringQueryFields`; Fleet preserves `search` and `status` as text. Arrays/objects stay intact for Zod to reject. Writes parsed body/query values back, answers 400 `invalid_schema` with `data.errors`, and forwards non-Zod errors to `next(err)`. Existing two-argument calls remain supported. |
-| `logger.middleware.js` | Logs IP, method, URL, body and query, with password fields replaced by `***`. Off in tests. |
+| `logger.middleware.js` | Logs method, route template and HTTP status after completion. Never logs raw URL, body or query values, so no email/phone/password is retained (D37). Off in tests. |
 | `private.auth.middleware.js` | Lets only 127.0.0.1 and ::1 through, for internal routes. It isn't user authentication: behind a reverse proxy on the same host, every request passes. |
 
 ## Authentication
+
+D33: ordinary `AuthMiddleware` still blocks every inactive user. Future finish/cancel routes alone may opt into `AuthMiddleware.forTripAction('finish' | 'cancel')`, using path parameter `id` for the trip. It reloads the user and validates the driver's own ongoing trip independently of assignments, including for active drivers. No current production route opts in. The future trip service must repeat ownership/status checks under its write transaction to prevent a race with completion/deactivation, and must coordinate user/vehicle locks (RN06/RN07). Trip routes are not implemented here.
 
 - **JWT:** payload `{ sub: '<user id>', role }`, signed with `JWT_SECRET`, expires in 7 days (`AuthService`). There's no revocation list: a token stays valid until it expires, but a deleted or deactivated user is rejected because the middleware reloads the user.
 - **Passwords:** bcrypt with cost 10. The policy is 8–72 characters with upper case, lower case and a digit (`utils/schemas.js`).

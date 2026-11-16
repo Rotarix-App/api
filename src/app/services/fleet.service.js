@@ -5,6 +5,7 @@ const VehicleAssignmentRepository = require('../repositories/vehicle-assignment.
 const TripRepository = require('../repositories/trip.repository')
 const UserRepository = require('../repositories/user.repository')
 const utils = require('../utils')
+const UserHistory = require('../utils/user-history')
 
 class FleetService {
     /**
@@ -168,7 +169,7 @@ class FleetService {
                 status: vehicle.status,
                 available: vehicle.status === 'active' && fleet.status === 'active' && !vehicle.trips.length,
                 tripStatus: vehicle.trips.length ? 'in_progress' : 'free',
-                tripDriver: tripDriver ? { id: tripDriver.id, name: tripDriver.name } : null,
+                tripDriver: vehicle.trips.length ? UserHistory.present(tripDriver) : null,
                 assignedDrivers: vehicle.assignedDrivers.map((driver) => ({ id: driver.id, name: driver.name }))
             }
         })

@@ -1,6 +1,7 @@
 const { Op, fn, col } = require('sequelize')
 const { Vehicle, User, Trip, Fleet } = require('../database/models')
 const utils = require('../utils')
+const UserHistory = require('../utils/user-history')
 
 class VehicleRepository {
     /**
@@ -43,11 +44,7 @@ class VehicleRepository {
                     where: { status: 'in_progress' },
                     required: false,
                     include: [
-                        {
-                            model: User,
-                            as: 'driver',
-                            attributes: ['id', 'name']
-                        }
+                        UserHistory.include(User)
                     ]
                 }
             ],

@@ -1,8 +1,6 @@
 require('colors')
 require('./prototypes/console')
-require('dotenv').config({
-    path: process.env.NODE_ENV === 'test' ? '.env.test' : '.env'
-})
+require('./config/environment')()
 
 console.clear()
 
