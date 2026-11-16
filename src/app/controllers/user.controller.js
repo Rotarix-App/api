@@ -22,6 +22,10 @@ class UserController {
             error: 'A confirmação não confere com a nova senha.',
             path: ['newPasswordConfirmation']
         })
+
+        this.deleteSchema = z.object({
+            confirmation: z.string({ error: 'Digite EXCLUIR para confirmar a exclusão.' })
+        })
     }
 
     /**
@@ -77,7 +81,7 @@ class UserController {
      * @param {express.Response} res
      */
     async destroy(req, res) {
-        const result = await UserService.deleteAccount(req.user.id)
+        const result = await UserService.deleteAccount(req.user.id, req.body.confirmation)
         if (result.error) return utils.sendError(res, result)
 
         return res.status(200).json({

@@ -58,8 +58,11 @@ class UserService {
 
     /**
      * @param {number} userId
+     * @param {string} confirmation
      */
-    async deleteAccount(userId) {
+    async deleteAccount(userId, confirmation) {
+        if (confirmation !== 'EXCLUIR') return utils.error(400, 'confirmation_mismatch', 'Digite EXCLUIR para confirmar a exclusão.')
+
         const tripInProgress = await TripRepository.findInProgressByDriverId(userId)
         if (tripInProgress?.error) return tripInProgress
         if (tripInProgress) {

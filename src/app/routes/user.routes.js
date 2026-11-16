@@ -72,9 +72,23 @@ const SchemaParserMiddleware = require('../middlewares/schema.middleware')
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [confirmation]
+ *             properties:
+ *               confirmation: { type: string, description: Must equal EXCLUIR, example: EXCLUIR }
  *     responses:
  *       200:
  *         description: Account deleted
+ *       400:
+ *         description: invalid_schema, confirmation_mismatch
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
  *       401:
  *         description: unauthorized
  *         content:
@@ -88,7 +102,7 @@ const SchemaParserMiddleware = require('../middlewares/schema.middleware')
  */
 Router.get('/users/@me', AuthMiddleware, UserController.show)
 Router.put('/users/@me', AuthMiddleware, SchemaParserMiddleware(UserController.updateSchema), UserController.update)
-Router.delete('/users/@me', AuthMiddleware, UserController.destroy)
+Router.delete('/users/@me', AuthMiddleware, SchemaParserMiddleware(UserController.deleteSchema), UserController.destroy)
 
 /**
  * @swagger
