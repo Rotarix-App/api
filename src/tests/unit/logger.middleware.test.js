@@ -1,7 +1,7 @@
 const { EventEmitter } = require('events')
 const logger = require('../../app/middlewares/logger.middleware')
 
-test('Should log only route templates, never request bodies, query values or raw URLs (D37)', () => {
+test('Should log only route templates, never request bodies, query values or raw URLs', () => {
     const log = jest.spyOn(console, 'log').mockImplementation(() => {})
     try {
         const req = {

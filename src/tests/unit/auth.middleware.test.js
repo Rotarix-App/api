@@ -21,7 +21,7 @@ async function run(action, trip, user = { id: 15, role: 'driver', status: 'inact
     return { req, res, next }
 }
 
-describe('Restricted sessions (D33)', () => {
+describe('Restricted sessions', () => {
     test.each(['finish', 'cancel'])('Should permit only %s of the inactive driver own ongoing trip', async (action) => {
         const { req, next } = await run(action, { id: 20 })
         expect(next).toHaveBeenCalledTimes(1)
