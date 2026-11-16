@@ -72,7 +72,7 @@ The full schema, with sources and assumptions, is in `.claude/docs/data-model.md
 - `User`'s default scope hides `passwordHash`; use `User.scope('withPassword')` only for login and password changes.
 - All associations go in `models/associations.js`, with explicit `foreignKey` and `as`.
 - Models declare only types, `allowNull` and defaults. Uniqueness, foreign keys and checks live in `data/db.sql`.
-- No automatic migrations or `sequelize.sync()`. Always change `data/db.sql`, the model and `docs/der/der.mmd` together. At the user's explicit request, `data/migrations/2026-11-11-remove-driver-manager.sql` provides a manual, reviewable D38 upgrade for existing databases; it must not run automatically or without database-specific review/authorization.
+- No automatic migrations or `sequelize.sync()`. Always change `data/db.sql`, the model and `docs/der/der.mmd` together.
 
 ## SQL schema (`data/db.sql`)
 

@@ -19,15 +19,15 @@ The reference implementation is `src/tests/entrypoints/auth/auth.test.js`, `user
   - **refuses to run unless `MYSQL_DATABASE` is exactly `rotarix_test`**, before it opens a connection;
   - rewrites only the `DROP`, `CREATE` and `USE` statements, so `rotarix` itself is never touched.
 - `setupFilesAfterEnv` (`src/tests/setup/global.js`) exposes the Express app as `global.app`. After each file it waits for `connection.ready` and closes the Sequelize connection; without that wait, fast files tear down mid-handshake and the run exits with code 1.
-- Jest sets `NODE_ENV=test`. `src/config/environment.js` is shared by setup/bootstrap: inherited variables win, followed by `.env.test.local` (ignored by Git), then `.env.test`. Paths are absolute from the repository root. Both loader/setup require exactly `rotarix_test`. The HTTP server and request logger are off. See [local database diagnosis](../docs/testing-database.md); never assume Compose credentials match a previously initialized server/volume.
-- **Local MySQL with other credentials:** use a private `.env.test.local` for the verified intended instance, or explicit environment variables. The user authorized recreating only `rotarix_test`. The legacy command below supplies explicit credentials without printing them; there is no automatic fallback to `.env`:
+- Jest sets `NODE_ENV=test`. `src/config/environment.js` is shared by setup/bootstrap: inherited variables win, followed by `.env.test.local` (ignored by Git), then `.env.test`. Paths are absolute from the repository root. Both loader/setup require exactly `rotarix_test`. The HTTP server and request logger are off.
+- **Local MySQL with other credentials:** set the variables inline (`MYSQL_PASSWORD= npm test` for root without a password), or use a private `.env.test.local`, which must never be committed. The user authorized recreating only `rotarix_test`. The legacy command below supplies explicit credentials without printing them; there is no automatic fallback to `.env`:
 
   ```bash
   ( set -a; eval "$(grep -E '^MYSQL_(HOST|PORT|USERNAME|PASSWORD)=' .env | tr -d '\r')"; set +a; MYSQL_DATABASE=rotarix_test npm test )
   ```
 
 - **CI** (`.github/workflows/test.yml`) starts a MySQL 8 service and runs `npm test` with `MYSQL_DATABASE=rotarix_test`; `globalSetup` builds the schema.
-- The custom sequencer `src/tests/sequencer.js` runs the files in its `order` array first (currently `auth.test.js`, `users.test.js`, `fleets.test.js`, `vehicles.test.js`), then the rest alphabetically. Add each new domain's file in dependency order. Tests must still pass in any order.
+- The custom sequencer `src/tests/sequencer.js` runs the files in its `order` array first (currently `auth.test.js`, `users.test.js`, `fleets.test.js`, `vehicles.test.js`, `drivers.test.js`), then the rest alphabetically. Add each new domain's file in dependency order. Tests must still pass in any order.
 
 ## Structure
 

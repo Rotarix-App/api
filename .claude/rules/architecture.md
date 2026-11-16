@@ -119,7 +119,7 @@ No linter or formatter is configured, so match the file you are editing:
 ## Configuration
 
 - Environment variables through dotenv, read via `process.env.*`: `SERVER_PORT`, `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USERNAME`, `MYSQL_PASSWORD`, `JWT_SECRET`.
-- `src/config/environment.js`, shared by `src/index.js` and test globalSetup, loads `.env.test.local` then `.env.test` in test mode, otherwise `.env`. Inherited variables take precedence. Test mode rejects any database other than `rotarix_test` before connecting. The local override is ignored by Git.
+- `src/config/environment.js`, shared by `src/index.js` and test globalSetup, loads `.env.test.local` then `.env.test` in test mode, otherwise `.env`. Inherited variables take precedence. Test mode rejects any database other than `rotarix_test` before connecting. The optional `.env.test.local` override is ignored by Git and must never be committed.
 - Add new variables to `.env.example` (and `.env.test` if tests need them) with placeholder values only.
 
 ## Logging

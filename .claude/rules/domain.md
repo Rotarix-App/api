@@ -33,7 +33,7 @@ Each user has exactly one role, chosen at sign-up and never changed: **manager**
 | Record expenses, refueling and maintenance | — | on assigned vehicles, with or without a trip | D18, D19, RN03 |
 | Edit and delete expenses | — | own expenses | D21 (limits: P21) |
 
-A manager only accesses the fleets they created (D27), and so only their vehicles and assignments. The driver registry is shared among managers in Transcarvalho, including unassigned drivers (D38, supersedes D32). Managing the shared profile does not grant permission to replace/release another manager's vehicle assignments. A deleted manager's fleets remain an open question (P23).
+A manager only accesses the fleets they created (D27), and so only their vehicles and assignments. Each driver has at most one responsible manager, and only that manager accesses them; other managers get 404 (D32). A deleted manager's fleets remain an open question (P23).
 
 ## Business rules
 
@@ -61,13 +61,12 @@ A manager only accesses the fleets they created (D27), and so only their vehicle
   - The manager can only raise the odometer, which records a manual reading (D31).
   - Deleting requires typing the plate. The vehicle disappears for drivers, while its trips, expenses and photos are kept.
   - Service alerts come from odometer readings ("Revisão em 800 km", "Troca de óleo vencida há 420 km"). Where they're configured is undefined (P09).
-- **Driver** (RF06, D14, D24, D33–D38).
-  - Any authenticated manager manages the shared registry. Drivers can exist without assignments; users has neither manager_id nor fleet_id. Operational relationships derive from assignments (D38).
-  - Created by a manager (name, email, phone, CNH number, CNH category B/C/D/E, temporary password) or through self sign-up.
-  - Deactivating removes assignments. Restricted access only permits finishing/cancelling the driver's own ongoing trip (D33), then blocks all access. Idempotent reactivation restores no assignments (D36).
+- **Driver** (RF06, D14, D24, D32–D37).
+  - Created by a manager (name, email, phone, CNH number, CNH category B/C/D/E, temporary password), who becomes their responsible manager, or through self sign-up, with no manager. A manager links a driver without a manager by exact email (`POST /drivers/link`); there is no listing of drivers without a manager, and another manager's driver answers 404 (D32).
+  - Deactivating is allowed during a trip (RF06) and removes assignments; while the trip lasts, `tripStatus` stays `in_progress` so the app warns the manager. Restricted access only permits finishing/cancelling the driver's own ongoing trip (D33), then blocks all access. Idempotent reactivation restores no assignments (D36).
   - Deleting requires `EXCLUIR`, is blocked during a trip (409 `driver_has_trip_in_progress`, D34), and anonymizes history with only "Motorista removido" (D37).
-- **Assignment** (RF07, D13, D35, D38).
-  - Only the current fleet manager replaces/releases its assignments; another manager gets 409 driver_assigned_to_another_manager. Cross-manager transfer requires explicit release then reassignment. Replacement cannot remove the ongoing trip vehicle; release during a trip is blocked (409, D35/D38).
+- **Assignment** (RF07, D13, D35, D39).
+  - Only the driver's responsible manager assigns them, within that manager's own active fleets. Releasing removes the assignments and leaves the driver without a manager, so another manager can link them by email (D35). Replacement cannot remove the ongoing trip vehicle; release during a trip is blocked (409 `driver_has_trip_in_progress`). An inactive driver can't be assigned (409 `driver_inactive`, D39).
   - A driver works in one fleet at a time, with one or more of its vehicles; a vehicle can have several drivers.
   - The driver's fleet isn't stored. It's the fleet of their assigned vehicles, so all of those vehicles must belong to the same active fleet.
   - Inactive fleets can't be chosen, and saving requires at least one vehicle.

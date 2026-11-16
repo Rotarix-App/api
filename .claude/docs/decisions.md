@@ -4,8 +4,6 @@ Started 2026-10-18. Every entry here is either stated in the official sources, c
 
 ## Confirmed by the user
 
-D38 supersedes D32 and the direct manager/driver ownership and email-link transfer portions of D35. Historical entries below are retained; D13, D14, D24, D27 and D33–D37 remain valid as qualified by D38.
-
 | ID | Date | Decision | Confirmed by | Resolves |
 |---|---|---|---|---|
 | — | 2026-10-18 | Build persistent project memory from the three sources, keeping traceability and the official files intact. | user | - |
@@ -22,13 +20,15 @@ D38 supersedes D32 and the direct manager/driver ownership and email-link transf
 | **D29** | 2026-11-04 | **Deactivating a fleet makes its vehicles unavailable without changing their own status.** While the fleet is inactive its vehicles can't start trips; when it's reactivated, each vehicle is back to its own status, including those deactivated separately. | user | - |
 | **D30** | 2026-11-04 | **Deleting a vehicle on a trip is blocked**, like deactivating it (M05). Resolves part of P20. | user | - |
 | **D31** | 2026-11-04 | **The manager can only raise a vehicle's odometer when editing it.** A higher value is recorded as a manual reading; a lower one is rejected (RN07); changing it during a trip is blocked. | user | - |
-| **D32** | 2026-11-06 | Each driver has a nullable responsible manager (users.manager_id); managers have NULL. S12 creation sets the creator; S03 self-registration leaves it NULL. Link only by exact email; no discovery of unlinked or other managers' drivers. Only the responsible manager lists, reads, edits, deactivates, reactivates or deletes the driver; other access returns 404 driver_not_found (D27). Assign only within their own fleets. | user | P06 |
-| **D33** | 2026-11-06 | An inactive driver with an ongoing trip retains a restricted session solely to finish or cancel that own trip. Both actions validate trip ownership, never assignments removed by D24. After completion/cancellation all access is blocked. | user | P12 |
-| **D34** | 2026-11-06 | Deleting driver data during an ongoing trip returns 409 driver_has_trip_in_progress. Deactivate, let the driver finish, then delete (D28, D30). | user | P22 (manager deletion only) |
-| **D35** | 2026-11-06 | Managers never change assignments in another manager's fleet. Transfer requires release (manager_id becomes NULL), then exact-email linking by the new manager. Release during an ongoing trip is blocked. Replacing assignments cannot remove the ongoing trip vehicle (409). | user | P12; RF07 |
-| **D36** | 2026-11-06 | Status changes are idempotent, like fleets and vehicles. Reactivation never restores assignments removed by D24; the driver is free without assignments. Soft-deleted drivers cannot be reactivated. | user | P20 (driver reactivation) |
-| **D37** | 2026-11-06 | Historical user joins include deleted users (paranoid: false), exposing only the placeholder "Motorista removido" for deleted drivers, never NULL or other fields. Photos are retained. Storage keys must never contain name, email, phone or CNH. Request logs retain no email or phone. | user | P14 (partly) |
-| **D38** | 2026-11-11 | **Shared driver registry for Transcarvalho.** Remove users.manager_id and responsibleManager/managedDrivers; do not add users.fleet_id or companies. Authenticated managers may create, list/search/filter, read, edit, deactivate/reactivate and anonymize any nondeleted driver, including unassigned self-registered drivers (RF01, RF06). Operational links derive from vehicle_assignments → vehicles.fleet_id → fleets.manager_id. Preserve D27 fleet ownership and D13 one fleet per driver. Only the manager of current assignments may replace/release them. Transfer between managers requires explicit release of old assignments, then assignment by the receiving manager; no direct email-link/manager endpoints. Keep active-fleet, same-fleet, nonempty, unique vehicle selection, transactions and trip protections (D35). Deactivation removes assignments globally as the RF06 lifecycle action (D24); it is distinct from operational transfer. Preserve D33 restricted own-trip completion/cancellation, D34 deletion block, D36 reactivation without restoring links and D37 anonymized history. | user | P06; supersedes D32 and direct-ownership parts of D35 |
+| **D32** | 2026-11-16 | **Each driver has at most one responsible manager** (`users.manager_id`, NULL for managers). Creating a driver in S12 makes the creator responsible; self sign-up (S03) leaves it NULL. A manager links a driver without a manager by exact email (`POST /drivers/link`); drivers without a manager are never listed. Only the responsible manager lists, reads, edits, deactivates, reactivates, deletes or assigns the driver; anyone else gets 404 `driver_not_found` (as D27). | user | P06 |
+| **D33** | 2026-11-16 | **An inactive driver with an ongoing trip keeps a restricted session** solely to finish or cancel that own trip (RF06: deactivation is allowed and the trip stays active). Both actions check trip ownership, not assignments. Afterwards all access is blocked. While the trip lasts, the driver's `tripStatus` stays `in_progress`, so the app warns the manager. | user | P12 |
+| **D34** | 2026-11-16 | **Deleting a driver's data during an ongoing trip returns 409** `driver_has_trip_in_progress`. Deactivate, let the driver finish, then delete (as D28, D30). | user | P22 (manager deletion only) |
+| **D35** | 2026-11-16 | **Managers never change another manager's assignments.** Transfer: the responsible manager releases the driver, which removes their assignments and sets `manager_id` to NULL; the new manager then links them by email. Release during an ongoing trip is blocked, and replacing assignments can't remove the ongoing trip vehicle (409). | user | P12; RF07 |
+| **D36** | 2026-11-16 | **Driver status changes are idempotent**, like fleets and vehicles. Reactivation never restores the assignments removed by deactivation (D24); the driver comes back free without vehicles. A deleted driver can't be reactivated. | user | P20 (driver reactivation) |
+| **D37** | 2026-11-16 | **A deleted driver appears in history only as "Motorista removido"**: historical joins include deleted users (paranoid: false) but expose no id, contact or CNH. Photos are kept. Storage keys never contain name, email, phone or CNH. Request logs keep no email or phone. | user | P14 (partly) |
+| **D39** | 2026-11-16 | **An inactive driver can't receive assignments**: 409 `driver_inactive`. Reactivate first, then assign. | user | — |
+
+Rejected on 2026-11-16: a shared driver registry for all managers (proposed as D38 on 2026-11-11 without the user's confirmation). D32 applies instead.
 
 ## From the official sources
 
@@ -119,6 +119,6 @@ When the user answers an open question (see [`requirements-analysis.md`](require
 
 | ID | Date | Decision | Confirmed by | Resolves |
 |---|---|---|---|---|
-| D32 | YYYY-MM-DD | … | user | Pxx |
+| D40 | YYYY-MM-DD | … | user | Pxx |
 
 Then update the rules and docs it affects, and set the question's status to **Resolved → Dxx**. If the prototype changes, update [`prototype.md`](prototype.md) and review D10–D26.

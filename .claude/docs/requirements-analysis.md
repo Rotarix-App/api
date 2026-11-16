@@ -9,7 +9,7 @@ This is an analysis. It doesn't change the sources, which stay verbatim in Portu
 
 | Abbr. | File | Contents | Read it for |
 |---|---|---|---|
-| — | [prototype.md](prototype.md) and Figma | Screens S01–S37 and modals M01–M24 | **Functionality**: screens, flows, fields, behavior |
+| — | [prototype.md](prototype.md) and Figma | Screens S01–S39 and modals M01–M27 | **Functionality**: screens, flows, fields, behavior |
 | TAP | [TAP_Termo_Abertura_Rotarix.md](sources/TAP_Termo_Abertura_Rotarix.md) | Project charter: team, client, dates, problem, goal, scope, assumptions, risks, acceptance (sections 1.1–1.14) | Scope, deadline, delivery, acceptance |
 | ER | [Especificacao_Requisitos_Rotarix.md](sources/Especificacao_Requisitos_Rotarix.md) | Requirements spec: scope, RF01–RF13, UC01–UC08, RNF01–RNF06, RN01–RN08, traceability matrix, user roles, glossary, revisions (v1.4, 2026-09-28) | Business rules, non-functional requirements, validation |
 | PI | [Projeto_Intervencao_Rotarix.md](sources/Projeto_Intervencao_Rotarix.md) | Intervention project: problem, justification, objectives, technologies, methodology, schedule, references | Technology background, methodology, evaluation |
@@ -131,7 +131,7 @@ P stands for *pending*. When the user answers one, record the answer and its dat
 | P03 | The official matrix maps RF06→UC03, RF08→UC04, RF10/RF13→UC05; the text points to UC04, UC05, UC06. | Approving a corrected matrix | Open (documentation only) |
 | P04 | PI mentions location tracking and communication; no RF covers them. | Scope | **Resolved → D17** (out of scope) |
 | P05 | RF03 is ambiguous about read-only fields; RF06 lets managers edit driver data. | Who edits CNH | **Resolved → D15** |
-| P06 | RF01 lets drivers sign up; RF06 lets managers register them. | Account creation flow | **Resolved → D38** (2026-11-11): shared driver registry, including unassigned drivers; supersedes D32. Fleet ownership remains D27; operational transfer requires explicit release of vehicle assignments. |
+| P06 | RF01 lets drivers sign up; RF06 lets managers register them. | Account creation flow | **Resolved → D32** (confirmed 2026-11-16): each driver has one responsible manager; self sign-up leaves none, and a manager links them by exact email. D38 (shared registry) was rejected. |
 | P07 | Fleets "under the manager's responsibility"; no ownership or isolation defined. | Access between managers; separation per company | **Resolved → D27** (2026-11-04): each fleet belongs to the manager who created it, and only that manager accesses it. |
 | P08 | RF08 says "the user"; UC05 points to the manager. | Who sees metrics, and which ones | **Resolved → D16** |
 | P09 | UC08/RN08 require maintenance with photos; RF05 requires service alerts. | Alert kinds, intervals and where they're configured | Open. The prototype shows "Revisão em X km", "Troca de óleo vencida há X km" and "Próxima revisão aos X km", but has no configuration screen. The data model proposes a `service_reminders` table. |
@@ -149,6 +149,7 @@ P stands for *pending*. When the user answers one, record the answer and its dat
 | P21 | M10–M11 let a driver edit and delete expenses, with no limits shown. | Whether there are limits (for example after the trip is finished) and whether managers can edit or delete | Open |
 | P22 | M17 (driver deletes their own account) doesn't say what happens to a trip in progress. If the account were deleted anyway, the trip would stay in progress forever and keep its vehicle blocked (RN06). | Whether to block the deletion, or to cancel or close the trip automatically | Open. **Proposal implemented:** `DELETE /users/@me` returns 409 `trip_in_progress` until the trip is finished or cancelled. |
 | P23 | D25 (M15) keeps the company's fleets and vehicles when a manager deletes their account, but under D27 only that manager can access their fleets. After the deletion, nobody can reach them. | Whether a manager's fleets are transferred to another manager, blocked from deletion, or left orphaned | Open. Today they are left orphaned: `fleets.manager_id` keeps pointing at the anonymized user. |
+| P24 | Checked against the Figma on 2026-11-16: decisions D28, D32 and D35 have no screen or still contradict the prototype. No screen links a self-registered driver by email (`POST /drivers/link`) or releases a driver (`DELETE /drivers/:id/assignments`); M07 lists only edit, manage assignments, deactivate and delete. M03 still says the vehicles "ficam sem frota" (D28 deletes them). S11 shows an inactive driver with a fleet, although M08 and the API remove the assignments. | Draw the link and release flows, update the M03 text and the S11 example | **Resolved in the prototype** (2026-11-16): S38–S39 (link), M25 (Novo → cadastrar/vincular), "Liberar motorista" in M07 with M26–M27, M03 text per D28, S11 inactive row shows "Sem frota". Awaiting the user's visual review. |
 
 ## Validation criteria (proposal)
 

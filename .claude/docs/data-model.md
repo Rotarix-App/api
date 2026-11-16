@@ -39,12 +39,13 @@ Fleets are hard-deleted. The service first soft-deletes the fleet's vehicles and
 
 ### users (S02–S03, S11–S13, S19–S20, S36–S37)
 
-D38 supersedes the direct relationship introduced by D32: users has no manager_id or fleet_id. The shared driver registry includes users with no assignments. Keep fleets.manager_id (D27). For an already initialized schema containing the obsolete column, review [the separate migration](../../data/migrations/2026-11-11-remove-driver-manager.sql); it is not executed automatically.
+Each driver has at most one responsible manager (`manager_id`, D32). users has no fleet_id: the driver's fleet is derived from their assignments.
 
 | Column | Type | Null | Notes |
 |---|---|---|---|
 | id | INT | — | PK |
 | role | ENUM manager, driver | — | Never changes (RN01) |
+| manager_id | INT | ✓ | FK users. The driver's responsible manager (D32): set by the manager who creates them, NULL after self sign-up or a release (D35). Always NULL for managers |
 | name | VARCHAR(120) | — | |
 | email | VARCHAR(160) | — | Unique; used as login |
 | password_hash | VARCHAR(255) | — | bcrypt. The default scope hides it; use `User.scope('withPassword')` |
@@ -205,6 +206,7 @@ The prototype shows these alerts but has no screen to configure them.
 | From | To | Cardinality | Column |
 |---|---|---|---|
 | users | fleets | 1 – N | fleets.manager_id |
+| users (managers) | users (drivers) | 0..1 – N | users.manager_id |
 | fleets | vehicles | 0..1 – N | vehicles.fleet_id |
 | users (drivers) | vehicles | N – M | vehicle_assignments (the driver's fleet is derived from it) |
 | users | photos | 1 – N | photos.uploaded_by |
@@ -222,7 +224,7 @@ The prototype shows these alerts but has no screen to configure them.
 
 ## Assumptions to confirm
 
-- **One company (confirmed D38).** No `companies` table. Fleets belong to their creator (D27). Drivers are shared among managers, including unassigned drivers; neither manager_id nor fleet_id exists on users. D38 supersedes D32; operational links derive from assignments.
+- **One company.** No `companies` table. Fleets belong to their creator (D27) and drivers to their responsible manager (D32). A deleted manager's fleets and drivers remain open (P23).
 - **P17 and P18:** refuelings and maintenances are separate tables, so how they count in the spend categories is a reporting rule that can change without touching the schema.
 - **P09:** `service_reminders` is a proposal.
 - **Timestamps:** `DATETIME` columns managed by Sequelize replace the BIGINT unix-ms template that was in the scaffold's `db.sql`.

@@ -6,7 +6,7 @@ The Figma prototype is the **source of truth for functionality** (screens, flows
 
 - **File:** "Rotarix — Protótipo Mobile", version 1.0 of 2026-09-26. [Open in Figma](https://www.figma.com/design/dTeXHA65uZrG3dSnWH0rE8/Rotarix-%E2%80%94-Prot%C3%B3tipo-Mobile?node-id=25-2147). File key `dTeXHA65uZrG3dSnWH0rE8`.
 - **Pages:** `Capa` (25:2147), `Fundamentos e componentes` (0:1, design system) and `Telas` (3:4). The screens are on `Telas`, in four sections: `Acesso` (8:2), `Gestor` (8:3), `Motorista` (8:4) and `Modais e confirmações` (36:1691).
-- **Numbering:** screens are **S01–S37** (frames `01 · Login` … `37 · Editar perfil`) and modals are **M01–M24**. This file cites them that way.
+- **Numbering:** screens are **S01–S39** (frames `01 · Login` … `39 · Vincular motorista (erro)`) and modals are **M01–M27**. This file cites them that way. S38–S39 and M25–M27 were added on 2026-11-16, at the user's request, for the confirmed decisions D32 and D35; they sit at the end of the Gestor and Modais sections.
 - **Reading it:** with the Figma MCP, call `create_session` first, then `get_metadata` or a read-only `use_figma` for text and links, and `get_screenshot` for visuals.
 - Names, plates, values and dates on the screens are sample data. The "Explorar o protótipo como: Gestor · Motorista" shortcut on S01 is prototype navigation, not a feature.
 
@@ -39,7 +39,7 @@ The Figma prototype is the **source of truth for functionality** (screens, flows
 - **Fleet screen (S08):** tabs Veículos, Motoristas and Resumo. Resumo shows fleet-scoped metrics. Each vehicle row shows its status, plate, model, year, a driver name and the odometer. There's an "Adicionar veículo" button.
 - **Actions (M01):** edit, deactivate or delete.
 - **Deactivate (M02):** the fleet stops being offered for new trips. Vehicles, drivers and history stay, and the fleet can be reactivated. The reactivate action itself isn't drawn (P20).
-- **Delete (M03):** requires typing the fleet name and can't be undone. Its vehicles are left without a fleet, the assignments of its drivers are removed, and trips and expenses are kept. **The API differs (D28):** the vehicles are deleted with the fleet, and deletion is blocked during a trip, so the modal text needs updating.
+- **Delete (M03):** requires typing the fleet name and can't be undone. Since 2026-11-16 the text follows D28: "Os 5 veículos da frota são excluídos e as atribuições dos 4 motoristas são removidas. Viagens, gastos e fotos já registrados são mantidos." Deletion is blocked during a trip (D28); that blocked state isn't drawn.
 
 ### Vehicles (S09–S10, M04–M06, M20)
 
@@ -54,9 +54,10 @@ The Figma prototype is the **source of truth for functionality** (screens, flows
 - **Deactivate during a trip (M05):** blocked. The message names the driver and the start time, with links to "Ver viagens em andamento" and "Entendi".
 - **Delete (M06):** requires typing the plate. The vehicle disappears for drivers, and trips, expenses and photos stay in history.
 
-### Drivers and assignments (S11–S14, M07–M09, M21)
+### Drivers and assignments (S11–S14, S38–S39, M07–M09, M21, M25–M27)
 
-- **List (S11):** search by name or CNH; filter Todos, Ativos or Inativos. Each row shows a status (Em viagem, Livre or Inativo), the CNH category and the fleet.
+- **List (S11):** search by name or CNH; filter Todos, Ativos or Inativos. Each row shows a status (Em viagem, Livre or Inativo), the CNH category and the fleet; an inactive driver shows "Sem frota" (D24). Only the manager's own drivers appear (D32). "Novo" opens **M25**: "Cadastrar novo motorista" (S12) or "Vincular motorista com conta no app" (S38).
+- **Link (S38–S39):** one field, "E-mail do motorista", and "Vincular motorista". For drivers who signed up on their own (S03); they then appear in the list (D32). S39 is the error state: "Nenhum motorista disponível com este e-mail. Confira o endereço." — the same answer for an unknown email and for another manager's driver.
 - **Create (S12):**
   - Full name, email (used as login), phone, CNH number, CNH category (B–E) and a **temporary password** ("O motorista poderá trocá-la depois em Perfil").
   - Saving goes straight to assignments.
@@ -66,6 +67,7 @@ The Figma prototype is the **source of truth for functionality** (screens, flows
   - The manager picks **one fleet** with a radio button; inactive fleets are disabled.
   - Then the manager checks any of that fleet's vehicles. A vehicle on a trip is flagged "Em viagem agora".
   - "Salvar atribuições" confirms. The screen explains that the driver only sees and records on the checked vehicles.
+- **Release (M07 → "Liberar motorista", M26–M27):** M26 asks "Liberar Anderson Lima?": the driver leaves the manager's list and loses their assignments, the account stays active, another manager can link them by email, and history is kept (D35). M27 is the blocked state during a trip: "Não é possível liberar Anderson Lima", with "Ver viagem em andamento" and "Entendi".
 - **Deactivate (M08):** the driver can no longer use the app and loses their fleet and vehicle assignments. Trips and expenses are kept. If a trip is in progress, the modal warns that it continues until it's finished.
 - **Delete data (M09):** requires typing `EXCLUIR` and can't be undone. Profile, contact data and CNH are removed. Trips and expenses stay in history without personal identification.
 
