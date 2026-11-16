@@ -2,11 +2,12 @@
 
 Back end (Node.js · Express 5 · Sequelize/MySQL) for **Rotarix**, a mobile fleet-management app for truck managers and drivers, built for the carrier Transcarvalho as a university project (2026-08-17 → 2026-11-25). The React Native/Expo app is not in this repository.
 
-> **Status (2026-11-04):**
+> **Status (2026-11-11):**
 > - **Built at the user's request:** the data model (awaiting approval, `docs/data-model.md`) and the **auth and users** module (register, login, `/users/@me` profile, password, account deletion), which is the reference implementation.
 > - **Built on the `Frotas` branch:** the **fleets** module (S06–S08, M01–M03), without the S08 Resumo tab. Each fleet belongs to the manager who created it (D27).
 > - **Built on the `feat/vehicles` branch:** the manager's **vehicles** module (S09–S10, M04–M06), without service alerts (P09).
-> - **Not started:** drivers, trips, expenses and metrics. Implement one only when the user asks for it.
+> - **Drivers and assignments:** shared registry (D38 supersedes D32), manager-only CRUD and transactional vehicle assignment/release. No direct manager FK on users. D33 middleware is prepared; trip routes remain pending.
+> - **Not started:** trip/expense endpoints, uploads and metrics. Implement one only when the user asks for it.
 
 **The Figma prototype is the source of truth for functionality** (D09): [Rotarix — Protótipo Mobile](https://www.figma.com/design/dTeXHA65uZrG3dSnWH0rE8/Rotarix-%E2%80%94-Prot%C3%B3tipo-Mobile?node-id=25-2147). Its content is written down in `.claude/docs/prototype.md`.
 
@@ -22,7 +23,7 @@ Back end (Node.js · Express 5 · Sequelize/MySQL) for **Rotarix**, a mobile fle
 | `.claude/docs/prototype.md` | Functional spec of every prototype screen (S01–S37) and modal (M01–M24), with API implications | On demand |
 | `.claude/docs/data-model.md` | Every table and column with its source screen, relationships, constraints and assumptions; the ERD is in `docs/der/` | On demand |
 | `.claude/docs/requirements-analysis.md` | Lookup by task, RF and RNF digest, prototype-vs-docs alignment, open questions P01–P23 | On demand |
-| `.claude/docs/decisions.md` | Confirmed decisions (D01–D31) and how to record new ones | On demand |
+| `.claude/docs/decisions.md` | Confirmed decisions (D01–D38), superseded history and how to record new ones | On demand |
 | `.claude/docs/progress.md` | Work log, what exists in code, known issues, recommended plan | On demand |
 | `.claude/docs/project-brief.md` | Client, timeline, method, assumptions, risks, acceptance criteria | On demand |
 | `.claude/docs/sources/` | The three official documents, **verbatim, in Portuguese** | Only the sections you need |
@@ -62,10 +63,10 @@ Docs, code identifiers and test names are in English. Text the API returns to us
 ## Commands
 
 ```bash
-docker compose up -d   # MySQL 8 on :3306, root/root, creates database "rotarix"
+docker compose up -d   # MySQL 8 on 127.0.0.1:3307; uses MYSQL_PASSWORD from .env and a project-scoped volume
 npm install
 npm start              # needs .env (copy .env.example); listens on SERVER_PORT
 npm test               # jest --runInBand; recreates "rotarix_test" from data/db.sql, then runs the tests
 ```
 
-`npm test` reads `.env.test` (root/root). If the local MySQL uses other credentials, export the `MYSQL_*` variables first; the command is in `.claude/rules/testing.md`.
+`npm test` reads `.env.test.local` when present, then `.env.test`. The local override should point to the Compose MySQL on port 3307 and select only `rotarix_test`. CI supplies its own MySQL settings on port 3306.

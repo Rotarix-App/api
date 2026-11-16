@@ -119,10 +119,10 @@ No linter or formatter is configured, so match the file you are editing:
 ## Configuration
 
 - Environment variables through dotenv, read via `process.env.*`: `SERVER_PORT`, `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USERNAME`, `MYSQL_PASSWORD`, `JWT_SECRET`.
-- `src/index.js` loads `.env.test` when `NODE_ENV=test` (Jest sets this), otherwise `.env`. dotenv doesn't override variables that are already set; CI and local test runs rely on that.
+- `src/config/environment.js`, shared by `src/index.js` and test globalSetup, loads `.env.test.local` then `.env.test` in test mode, otherwise `.env`. Inherited variables take precedence. Test mode rejects any database other than `rotarix_test` before connecting. The local override is ignored by Git.
 - Add new variables to `.env.example` (and `.env.test` if tests need them) with placeholder values only.
 
 ## Logging
 
 - `console.log` is patched to prefix a pt-BR timestamp. Messages are in Portuguese and use colored tags: `[i]`.cyan for info, `[!]`.green for success, `[i]`.red for failures (`utils.logError`).
-- The request logger is off in tests and replaces any body or query field whose name contains "password" with `***`.
+- The request logger is off in tests and logs only method, route template and response status, never raw URLs, bodies or query values (D37).

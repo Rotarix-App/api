@@ -1,3 +1,4 @@
+
 class Utils {
     /**
      * @param {number} httpStatus
@@ -17,7 +18,16 @@ class Utils {
      * @param {Error} error
      */
     logError(error) {
-        console.log(`[i]`.red + ` ${error?.stack || error}`)
+        const dbError = error?.parent || error?.original || error
+
+        console.error('[ERRO MYSQL]', {
+            code: dbError?.code,
+            errno: dbError?.errno,
+            sqlMessage: dbError?.sqlMessage,
+            message: error?.message
+        })
+
+        console.error(error?.stack || error)
 
         return undefined
     }

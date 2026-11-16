@@ -5,7 +5,8 @@ const mysql = require('mysql2/promise')
 const DATABASE_STATEMENTS = /(DROP DATABASE IF EXISTS|CREATE DATABASE IF NOT EXISTS|USE) rotarix;/g
 
 module.exports = async () => {
-    require('dotenv').config({ path: '.env.test', quiet: true })
+    process.env.NODE_ENV = 'test'
+    require('../../config/environment')()
 
     const database = process.env.MYSQL_DATABASE
     if (database !== 'rotarix_test') {
@@ -26,6 +27,9 @@ module.exports = async () => {
         multipleStatements: true
     })
 
-    await connection.query(schema.replace(DATABASE_STATEMENTS, `$1 \`${database}\`;`))
-    await connection.end()
+    try {
+        await connection.query(schema.replace(DATABASE_STATEMENTS, `$1 \`${database}\`;`))
+    } finally {
+        await connection.end()
+    }
 }

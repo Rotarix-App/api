@@ -6,6 +6,7 @@ const OdometerReadingRepository = require('../repositories/odometer-reading.repo
 const TripRepository = require('../repositories/trip.repository')
 const UserRepository = require('../repositories/user.repository')
 const utils = require('../utils')
+const UserHistory = require('../utils/user-history')
 
 const TIME_FORMAT = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' })
 const KM_FORMAT = new Intl.NumberFormat('pt-BR')
@@ -64,7 +65,7 @@ class VehicleService {
                 ? {
                     id: trip.id,
                     startedAt: trip.startedAt,
-                    driver: { id: trip.driver.id, name: trip.driver.name }
+                    driver: UserHistory.present(trip.driver)
                 }
                 : null,
             assignedDrivers: drivers.map((driver) => ({
@@ -245,7 +246,7 @@ class VehicleService {
     #onTripError(trip, action) {
         const since = TIME_FORMAT.format(new Date(trip.startedAt))
 
-        return utils.error(409, 'vehicle_on_trip', `O veículo está em viagem com ${trip.driver.name} desde as ${since}. Aguarde a viagem terminar para ${action}.`)
+        return utils.error(409, 'vehicle_on_trip', `O veículo está em viagem com ${UserHistory.present(trip.driver).name} desde as ${since}. Aguarde a viagem terminar para ${action}.`)
     }
 }
 

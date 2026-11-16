@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize')
 const connection = require('..')
+const UserHistory = require('../../utils/user-history')
 
 const Trip = connection.define('Trip', {
     id: {
@@ -52,5 +53,12 @@ const Trip = connection.define('Trip', {
     tableName: 'trips',
     underscored: true
 })
+
+/** @returns {object} */
+Trip.prototype.toJSON = function () {
+    const values = this.get({ plain: true })
+    if (Object.hasOwn(values, 'driver')) values.driver = UserHistory.present(values.driver)
+    return values
+}
 
 module.exports = Trip

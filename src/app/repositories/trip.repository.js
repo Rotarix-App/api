@@ -1,6 +1,7 @@
 const { Op, fn, col } = require('sequelize')
 const { Trip, Vehicle, User } = require('../database/models')
 const utils = require('../utils')
+const UserHistory = require('../utils/user-history')
 
 class TripRepository {
     /**
@@ -30,12 +31,7 @@ class TripRepository {
             attributes: ['id', 'startedAt'],
             where: { vehicleId, status: 'in_progress' },
             include: [
-                {
-                    model: User,
-                    as: 'driver',
-                    attributes: ['id', 'name'],
-                    paranoid: false
-                }
+                UserHistory.include(User)
             ],
             ...options
         }).catch(utils.logError)
