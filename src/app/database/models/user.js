@@ -11,6 +11,10 @@ const User = connection.define('User', {
         type: DataTypes.ENUM('manager', 'driver'),
         allowNull: false
     },
+    managerId: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
     name: {
         type: DataTypes.STRING(120),
         allowNull: false
@@ -56,9 +60,10 @@ const User = connection.define('User', {
 
 User.prototype.toJSON = function () {
     const values = { ...this.get() }
-    if (values.deletedAt) return { name: 'Motorista removido' }
+    if (values.deletedAt && values.role !== 'manager') return { name: 'Motorista removido' }
 
     delete values.passwordHash
+    delete values.managerId
     delete values.deletedAt
 
     return values

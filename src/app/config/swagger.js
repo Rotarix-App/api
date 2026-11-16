@@ -162,6 +162,7 @@ const options = {
                                 },
                                 tripStatus: {
                                     type: 'string',
+                                    description: 'in_progress while a trip is ongoing, even after deactivation; otherwise inactive or free.',
                                     enum: [
                                         'free',
                                         'in_progress',

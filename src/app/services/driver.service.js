@@ -10,39 +10,58 @@ const utils = require('../utils')
 
 class DriverService {
     /**
+     * @param {number} managerId
      * @param {object} data
      */
-    async create({ password, name, email, phone, cnhNumber, cnhCategory }) {
+    async create(managerId, { password, name, email, phone, cnhNumber, cnhCategory }) {
         const passwordHash = await AuthService.hashPassword(password)
-        const driver = await UserRepository.create({ name, email, phone, cnhNumber, cnhCategory, role: 'driver', passwordHash, status: 'active' })
+        const driver = await UserRepository.create({ name, email, phone, cnhNumber, cnhCategory, role: 'driver', managerId, passwordHash, status: 'active' })
         if (driver.error) return driver
         return this.#present(driver)
     }
 
     /**
+     * @param {number} managerId
      * @param {object} filters
      */
-    async list(filters) {
-        const drivers = await DriverRepository.list(filters)
+    async list(managerId, filters) {
+        const drivers = await DriverRepository.list(managerId, filters)
         if (drivers.error) return drivers
         return drivers.map((driver) => this.#serialize(driver, driver.assignedVehicles, driver.trips[0]))
     }
 
     /**
      * @param {number} id
+     * @param {number} managerId
      */
-    async findById(id) {
-        const driver = await DriverRepository.find({ id })
+    async findById(id, managerId) {
+        const driver = await DriverRepository.find({ id, managerId })
         if (driver.error) return driver
         return this.#present(driver)
     }
 
     /**
+     * @param {number} managerId
+     * @param {string} email
+     */
+    async link(managerId, email) {
+        return this.#write({ email }, async (driver, transaction) => {
+            if (driver.managerId !== null && driver.managerId !== managerId) return utils.error(404, 'driver_not_found', 'Motorista não encontrado.')
+            if (driver.managerId === null) {
+                const updated = await UserRepository.update(driver.id, { managerId }, { transaction })
+                if (updated.error) return updated
+            }
+            return this.#present(driver, { transaction })
+        })
+    }
+
+    /**
      * @param {number} id
+     * @param {number} managerId
      * @param {object} data
      */
-    async update(id, data) {
-        return this.#write({ id }, async (driver, transaction) => {
+    async update(id, managerId, data) {
+        return this.#write({ id, managerId }, async (driver, transaction) => {
             const updated = await UserRepository.update(id, data, { transaction })
             if (updated.error) return updated
             const reloaded = await DriverRepository.find({ id }, { transaction })
@@ -53,10 +72,11 @@ class DriverService {
 
     /**
      * @param {number} id
+     * @param {number} managerId
      * @param {string} status
      */
-    async changeStatus(id, status) {
-        return this.#write({ id }, async (driver, transaction) => {
+    async changeStatus(id, managerId, status) {
+        return this.#write({ id, managerId }, async (driver, transaction) => {
             if (status === 'inactive') {
                 const removed = await VehicleAssignmentRepository.deleteByDriverId(id, { transaction })
                 if (removed.error) return removed
@@ -70,10 +90,11 @@ class DriverService {
 
     /**
      * @param {number} id
+     * @param {number} managerId
      * @param {string} confirmation
      */
-    async destroy(id, confirmation) {
-        return this.#write({ id }, async (driver, transaction) => {
+    async destroy(id, managerId, confirmation) {
+        return this.#write({ id, managerId }, async (driver, transaction) => {
             if (confirmation !== 'EXCLUIR') return utils.error(400, 'confirmation_mismatch', 'Digite EXCLUIR para confirmar a exclusão.')
             const trip = await TripRepository.findInProgressByDriverId(id, { transaction })
             if (trip?.error) return trip
@@ -90,14 +111,14 @@ class DriverService {
      * @param {number} managerId
      */
     async release(id, managerId) {
-        return this.#write({ id }, async (driver, transaction) => {
-            const ownership = await this.#checkAssignments(id, managerId, transaction)
-            if (ownership.error) return ownership
+        return this.#write({ id, managerId }, async (driver, transaction) => {
             const trip = await TripRepository.findInProgressByDriverId(id, { transaction })
             if (trip?.error) return trip
             if (trip) return this.#tripError()
             const removed = await VehicleAssignmentRepository.deleteByDriverId(id, { transaction })
             if (removed.error) return removed
+            const updated = await UserRepository.update(id, { managerId: null }, { transaction })
+            if (updated.error) return updated
             return {}
         })
     }
@@ -108,12 +129,11 @@ class DriverService {
      * @param {{ fleetId: number, vehicleIds: number[] }} data
      */
     async assign(id, managerId, { fleetId, vehicleIds }) {
-        return this.#write({ id }, async (driver, transaction) => {
+        return this.#write({ id, managerId }, async (driver, transaction) => {
+            if (driver.status !== 'active') return utils.error(409, 'driver_inactive', 'Reative o motorista antes de atribuir veículos.')
             const fleet = await FleetRepository.findByIdAndManagerId(fleetId, managerId, { transaction, lock: true })
             if (fleet.error) return fleet
             if (fleet.status !== 'active') return utils.error(409, 'fleet_inactive', 'Escolha uma frota ativa.')
-            const ownership = await this.#checkAssignments(id, managerId, transaction)
-            if (ownership.error) return ownership
             const trip = await TripRepository.findInProgressByDriverId(id, { transaction })
             if (trip?.error) return trip
             if (trip && !vehicleIds.includes(trip.vehicleId)) return this.#tripError()
@@ -128,7 +148,6 @@ class DriverService {
             return this.#present(driver, { transaction })
         })
     }
-
     /**
      * @param {object} conditions
      * @param {function} action
@@ -174,25 +193,11 @@ class DriverService {
             id: driver.id, name: driver.name, email: driver.email,
             phone: driver.phone, cnhNumber: driver.cnhNumber, cnhCategory: driver.cnhCategory,
             status: driver.status,
-            tripStatus: driver.status === 'inactive' ? 'inactive' : trip ? 'in_progress' : 'free',
+            tripStatus: trip ? 'in_progress' : driver.status === 'inactive' ? 'inactive' : 'free',
             fleet: vehicles[0] ? { id: vehicles[0].fleet.id, name: vehicles[0].fleet.name, status: vehicles[0].fleet.status } : null,
             assignedVehicles: vehicles.map((vehicle) => ({ id: vehicle.id, plate: vehicle.plate, brand: vehicle.brand, model: vehicle.model, status: vehicle.status, tripStatus: vehicle.trips.length ? 'in_progress' : 'free' })),
             createdAt: driver.createdAt, updatedAt: driver.updatedAt
         }
-    }
-
-    /**
-     * @param {number} id
-     * @param {number} managerId
-     * @param {import('sequelize').Transaction} transaction
-     */
-    async #checkAssignments(id, managerId, transaction) {
-        const assignments = await VehicleAssignmentRepository.findByDriverId(id, { transaction, lock: true })
-        if (assignments.error) return assignments
-        if (assignments.some((assignment) => assignment.vehicle?.fleet?.managerId !== managerId)) {
-            return utils.error(409, 'driver_assigned_to_another_manager', 'O gestor da frota atual deve liberar as atribuições antes da transferência.')
-        }
-        return true
     }
 
     /** @returns {object} */

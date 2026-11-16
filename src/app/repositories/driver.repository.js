@@ -4,11 +4,12 @@ const utils = require('../utils')
 
 class DriverRepository {
     /**
+     * @param {number} managerId
      * @param {object} filters
      * @param {object} options
      */
-    async list({ search, status } = {}, options = {}) {
-        const conditions = { role: 'driver' }
+    async list(managerId, { search, status } = {}, options = {}) {
+        const conditions = { role: 'driver', managerId }
         if (status && status !== 'all') conditions.status = status
         if (search) conditions[Op.or] = ['name', 'cnh_number'].map((field) => where(fn('LOCATE', search, col(`User.${field}`)), { [Op.gt]: 0 }))
 

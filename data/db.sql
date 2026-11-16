@@ -6,6 +6,7 @@ USE rotarix;
 CREATE TABLE `users` (
 	`id` INT(11) NOT NULL AUTO_INCREMENT,
 	`role` ENUM('manager','driver') NOT NULL,
+	`manager_id` INT(11) NULL DEFAULT NULL,
 	`name` VARCHAR(120) NOT NULL,
 	`email` VARCHAR(160) NOT NULL,
 	`password_hash` VARCHAR(255) NOT NULL,
@@ -17,7 +18,9 @@ CREATE TABLE `users` (
 	`updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	`deleted_at` DATETIME NULL DEFAULT NULL,
 	PRIMARY KEY (`id`) USING BTREE,
-	UNIQUE INDEX `uq_users_email` (`email`)
+	UNIQUE INDEX `uq_users_email` (`email`),
+	INDEX `fk_users_manager` (`manager_id`),
+	CONSTRAINT `fk_users_manager` FOREIGN KEY (`manager_id`) REFERENCES `users` (`id`)
 )
 COLLATE='utf8mb4_general_ci'
 ENGINE=InnoDB

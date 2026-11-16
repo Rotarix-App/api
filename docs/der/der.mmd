@@ -3,6 +3,7 @@ title: Rotarix — Entity-Relationship Diagram
 ---
 erDiagram
     users ||--o{ fleets : "manager_id"
+    users |o--o{ users : "manager_id"
     fleets |o--o{ vehicles : "fleet_id"
     users ||--o{ vehicle_assignments : "driver_id"
     vehicles ||--o{ vehicle_assignments : "vehicle_id"
@@ -44,6 +45,7 @@ erDiagram
     users {
         int id PK
         enum role "manager | driver"
+        int manager_id FK "nullable, drivers"
         varchar(120) name
         varchar(160) email UK
         varchar(255) password_hash

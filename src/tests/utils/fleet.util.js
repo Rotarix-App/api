@@ -1,5 +1,5 @@
 const { randomUUID, randomInt } = require('crypto')
-const { Fleet, Vehicle, VehicleAssignment, OdometerReading, Trip } = require('../../app/database/models')
+const { User, Fleet, Vehicle, VehicleAssignment, OdometerReading, Trip } = require('../../app/database/models')
 const { createTestUser } = require('./user.util')
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -42,6 +42,7 @@ async function createLinkedFleet(managerId, overrides = {}) {
     const fleet = await createFleet(managerId, overrides)
     const vehicle = await createVehicle(fleet.id)
     const { user: driver } = await createTestUser('driver')
+    await User.update({ managerId }, { where: { id: driver.id } })
     await VehicleAssignment.create({ driverId: driver.id, vehicleId: vehicle.id })
     const reading = await OdometerReading.create({ vehicleId: vehicle.id, recordedBy: driver.id, valueKm: 0, source: 'trip_start' })
     const trip = await Trip.create({

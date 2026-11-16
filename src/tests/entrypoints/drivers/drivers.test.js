@@ -1,7 +1,7 @@
 const request = require('supertest')
 const { createTestUser, buildUser } = require('../../utils/user.util')
 const { createFleet, createVehicle, createLinkedFleet, finishTrip } = require('../../utils/fleet.util')
-const { User, Fleet, VehicleAssignment, Trip, Expense, Photo } = require('../../../app/database/models')
+const { User, VehicleAssignment, Trip, Expense, Photo } = require('../../../app/database/models')
 const { randomUUID } = require('crypto')
 const UserHistory = require('../../../app/utils/user-history')
 
@@ -41,16 +41,28 @@ async function linkedTrip(managerId = manager.user.id) {
 }
 
 const operations = [
-    ['get', '/drivers'], ['post', '/drivers'],
+    ['get', '/drivers'], ['post', '/drivers'], ['post', '/drivers/link'],
     ['get', '/drivers/1'], ['put', '/drivers/1'], ['patch', '/drivers/1/status'],
     ['delete', '/drivers/1'], ['delete', '/drivers/1/assignments'], ['put', '/drivers/1/assignments']
 ]
 
-describe('Driver permissions (D38, RN02)', () => {
+describe('Driver permissions', () => {
     describe('errors', () => {
-        test('Should remove direct manager link endpoints', async () => {
-            expect((await call('post', '/drivers/link', { email: driverAccount.user.email })).status).toBe(404)
-            expect((await call('delete', `/drivers/${driverAccount.user.id}/manager`)).status).toBe(404)
+        test("Should hide another manager's driver on every endpoint", async () => {
+            const driver = await createDriver()
+            const fleet = await createFleet(other.user.id)
+            const vehicle = await createVehicle(fleet.id)
+            for (const [method, suffix, body] of [
+                ['get', '', undefined], ['put', '', driver.payload], ['patch', '/status', { status: 'inactive' }],
+                ['delete', '', { confirmation: 'EXCLUIR' }], ['delete', '/assignments', undefined],
+                ['put', '/assignments', { fleetId: fleet.id, vehicleIds: [vehicle.id] }]
+            ]) {
+                const response = await call(method, `/drivers/${driver.id}${suffix}`, body, other.token)
+                expect(response.status).toBe(404)
+                expect(response.body.id).toBe('driver_not_found')
+            }
+            expect((await call('get', '/drivers', undefined, other.token)).body.data.map((row) => row.id)).not.toContain(driver.id)
+            expect(await User.findByPk(driver.id)).toMatchObject({ status: 'active', managerId: manager.user.id })
         })
 
         test.each(operations)('Should require authentication on %s %s', async (method, path) => {
@@ -96,24 +108,61 @@ describe('POST /drivers', () => {
         })
     })
     describe('success', () => {
-        test('Should create a shared driver and support temporary password login', async () => {
+        test('Should create a driver owned by the creating manager and support temporary password login', async () => {
             const driver = await createDriver({ managerId: other.user.id })
             expect(driver).not.toHaveProperty('managerId')
+            expect((await User.findByPk(driver.id)).managerId).toBe(manager.user.id)
             const login = await request(global.app).post('/login').send({ email: driver.email, password: driver.payload.password })
             expect(login.status).toBe(200)
             expect(login.body.data.user.role).toBe('driver')
         })
-        test('Should share self-registered unassigned drivers between managers', async () => {
-            const account = await createTestUser('driver')
-            expect(account.user).not.toHaveProperty('managerId')
-            expect(User.rawAttributes).not.toHaveProperty('managerId')
+        test('Should leave self-registered drivers without a manager and out of every list', async () => {
+            const account = await createTestUser('driver', { managerId: manager.user.id })
+            expect((await User.findByPk(account.user.id)).managerId).toBeNull()
             for (const token of [manager.token, other.token]) {
-                const response = await call('get', '/drivers/' + account.user.id, undefined, token)
+                expect((await call('get', '/drivers/' + account.user.id, undefined, token)).status).toBe(404)
+                expect((await call('get', '/drivers', undefined, token)).body.data.map((row) => row.id)).not.toContain(account.user.id)
+            }
+        })
+    })
+})
+
+describe('POST /drivers/link', () => {
+    describe('errors', () => {
+        test.each([{}, { email: 'invalid' }])('Should validate the email %j', async (body) => {
+            const response = await call('post', '/drivers/link', body)
+            expect(response.status).toBe(400)
+            expect(response.body.id).toBe('invalid_schema')
+        })
+        test("Should answer 404 for unknown emails, managers and another manager's driver", async () => {
+            const owned = await createDriver()
+            for (const email of [`unknown.${Date.now()}@rotarix.test`, other.user.email, owned.email]) {
+                const response = await call('post', '/drivers/link', { email }, other.token)
+                expect(response.status).toBe(404)
+                expect(response.body.id).toBe('driver_not_found')
+            }
+            expect((await User.findByPk(owned.id)).managerId).toBe(manager.user.id)
+        })
+    })
+    describe('success', () => {
+        test('Should link a driver without a manager by exact email, idempotently', async () => {
+            const account = await createTestUser('driver')
+            for (let attempt = 0; attempt < 2; attempt++) {
+                const response = await call('post', '/drivers/link', { email: account.user.email.toUpperCase() })
                 expect(response.status).toBe(200)
                 expect(response.body.data).toMatchObject({ id: account.user.id, fleet: null, assignedVehicles: [] })
                 expect(response.body.data).not.toHaveProperty('managerId')
             }
-            expect(Fleet.rawAttributes).toHaveProperty('managerId')
+            expect((await User.findByPk(account.user.id)).managerId).toBe(manager.user.id)
+            expect((await call('get', `/drivers/${account.user.id}`)).status).toBe(200)
+            expect((await call('get', `/drivers/${account.user.id}`, undefined, other.token)).status).toBe(404)
+        })
+        test('Should serialize competing links so only one manager wins', async () => {
+            const account = await createTestUser('driver')
+            const responses = await Promise.all([manager.token, other.token].map((token) => call('post', '/drivers/link', { email: account.user.email }, token)))
+            expect(responses.map((response) => response.status).sort()).toEqual([200, 404])
+            const winner = responses[0].status === 200 ? manager : other
+            expect((await User.findByPk(account.user.id)).managerId).toBe(winner.user.id)
         })
     })
 })
@@ -125,6 +174,19 @@ describe('GET /drivers and GET/PUT /drivers/:id', () => {
         })
         test.each(['0', 'abc', '2147483648'])('Should reject invalid path id %s', async (id) => {
             expect((await call('get', `/drivers/${id}`)).status).toBe(400)
+        })
+        test.each(['name', 'email', 'phone', 'cnhNumber', 'cnhCategory'])('Should validate %s on edit', async (field) => {
+            const driver = await createDriver()
+            const response = await call('put', `/drivers/${driver.id}`, { ...driver.payload, [field]: undefined })
+            expect(response.status).toBe(400)
+            expect(response.body.id).toBe('invalid_schema')
+        })
+        test('Should reject editing to an email already in use', async () => {
+            const driver = await createDriver()
+            const taken = await createDriver()
+            const response = await call('put', `/drivers/${driver.id}`, { ...driver.payload, email: taken.email })
+            expect(response.status).toBe(409)
+            expect(response.body.id).toBe('email_already_exists')
         })
     })
     describe('success', () => {
@@ -144,34 +206,27 @@ describe('GET /drivers and GET/PUT /drivers/:id', () => {
         })
         test('Should edit profile without changing password or manager', async () => {
             const driver = await createDriver()
-            const response = await call('put', `/drivers/${driver.id}`, { ...driver.payload, name: 'Updated Driver', role: 'manager', managerId: other.user.id, password: 'Other123' }, other.token)
+            const response = await call('put', `/drivers/${driver.id}`, { ...driver.payload, name: 'Updated Driver', role: 'manager', managerId: other.user.id, password: 'Other123' })
             expect(response.status).toBe(200)
             expect(response.body.data).toMatchObject({ name: 'Updated Driver' })
             expect(response.body.data).not.toHaveProperty('managerId')
-            expect((await User.findByPk(driver.id)).role).toBe('driver')
+            expect(await User.findByPk(driver.id)).toMatchObject({ role: 'driver', managerId: manager.user.id })
             expect((await call('get', `/drivers/${driver.id}`)).body.data.name).toBe('Updated Driver')
         })
     })
 })
 
-describe('PUT /drivers/:id/assignments (S14, D35)', () => {
+describe('PUT /drivers/:id/assignments', () => {
     describe('errors', () => {
-        test('Should block another manager from replacing or releasing assignments until explicit owner release', async () => {
+        test('Should reject assignments to an inactive driver', async () => {
             const driver = await createDriver()
-            const firstFleet = await createFleet(manager.user.id)
-            const firstVehicle = await createVehicle(firstFleet.id)
-            const nextFleet = await createFleet(other.user.id)
-            const nextVehicle = await createVehicle(nextFleet.id)
-            expect((await call('put', `/drivers/${driver.id}/assignments`, { fleetId: firstFleet.id, vehicleIds: [firstVehicle.id] })).status).toBe(200)
-            for (const method of ['put', 'delete']) {
-                const response = await call(method, `/drivers/${driver.id}/assignments`, method === 'put' ? { fleetId: nextFleet.id, vehicleIds: [nextVehicle.id] } : undefined, other.token)
-                expect(response.status).toBe(409)
-                expect(response.body.id).toBe('driver_assigned_to_another_manager')
-            }
-            expect(await VehicleAssignment.count({ where: { driverId: driver.id, vehicleId: firstVehicle.id } })).toBe(1)
-            expect((await call('delete', `/drivers/${driver.id}/assignments`)).status).toBe(200)
-            expect((await call('put', `/drivers/${driver.id}/assignments`, { fleetId: nextFleet.id, vehicleIds: [nextVehicle.id] }, other.token)).status).toBe(200)
-            expect(await VehicleAssignment.count({ where: { driverId: driver.id, vehicleId: nextVehicle.id } })).toBe(1)
+            const fleet = await createFleet(manager.user.id)
+            const vehicle = await createVehicle(fleet.id)
+            await call('patch', `/drivers/${driver.id}/status`, { status: 'inactive' })
+            const response = await call('put', `/drivers/${driver.id}/assignments`, { fleetId: fleet.id, vehicleIds: [vehicle.id] })
+            expect(response.status).toBe(409)
+            expect(response.body.id).toBe('driver_inactive')
+            expect(await VehicleAssignment.count({ where: { driverId: driver.id } })).toBe(0)
         })
 
         test('Should roll back replacement if inserting the new assignments fails', async () => {
@@ -226,18 +281,20 @@ describe('PUT /drivers/:id/assignments (S14, D35)', () => {
         })
     })
     describe('success', () => {
-        test('Should serialize competing assignments to different manager fleets', async () => {
+        test('Should release the driver to no manager, then let another manager link and assign them', async () => {
             const driver = await createDriver()
-            const fleetA = await createFleet(manager.user.id)
-            const fleetB = await createFleet(other.user.id)
-            const vehicleA = await createVehicle(fleetA.id)
-            const vehicleB = await createVehicle(fleetB.id)
-            const responses = await Promise.all([
-                call('put', `/drivers/${driver.id}/assignments`, { fleetId: fleetA.id, vehicleIds: [vehicleA.id] }),
-                call('put', `/drivers/${driver.id}/assignments`, { fleetId: fleetB.id, vehicleIds: [vehicleB.id] }, other.token)
-            ])
-            expect(responses.map((response) => response.status).sort()).toEqual([200, 409])
-            expect(await VehicleAssignment.count({ where: { driverId: driver.id } })).toBe(1)
+            const firstFleet = await createFleet(manager.user.id)
+            const firstVehicle = await createVehicle(firstFleet.id)
+            const nextFleet = await createFleet(other.user.id)
+            const nextVehicle = await createVehicle(nextFleet.id)
+            expect((await call('put', `/drivers/${driver.id}/assignments`, { fleetId: firstFleet.id, vehicleIds: [firstVehicle.id] })).status).toBe(200)
+            expect((await call('delete', `/drivers/${driver.id}/assignments`)).status).toBe(200)
+            expect(await User.findByPk(driver.id)).toMatchObject({ managerId: null, status: 'active' })
+            expect(await VehicleAssignment.count({ where: { driverId: driver.id } })).toBe(0)
+            expect((await call('get', `/drivers/${driver.id}`)).status).toBe(404)
+            expect((await call('post', '/drivers/link', { email: driver.email }, other.token)).status).toBe(200)
+            expect((await call('put', `/drivers/${driver.id}/assignments`, { fleetId: nextFleet.id, vehicleIds: [nextVehicle.id] }, other.token)).status).toBe(200)
+            expect(await VehicleAssignment.count({ where: { driverId: driver.id, vehicleId: nextVehicle.id } })).toBe(1)
         })
 
         test('Should replace assignments and derive fleet, including trip status', async () => {
@@ -253,14 +310,24 @@ describe('PUT /drivers/:id/assignments (S14, D35)', () => {
                 expect((await call('put', `/drivers/${free.id}/assignments`, { fleetId: fleet.id, vehicleIds: ids })).status).toBe(200)
                 expect(await VehicleAssignment.count({ where: { driverId: free.id } })).toBe(ids.length)
             }
-            expect((await call('delete', `/drivers/${free.id}/assignments`)).status).toBe(200)
-            expect(await VehicleAssignment.count({ where: { driverId: free.id } })).toBe(0)
         })
     })
 })
 
-describe('PATCH status and DELETE driver data (M08/M09)', () => {
+describe('PATCH /drivers/:id/status and DELETE /drivers/:id', () => {
     describe('errors', () => {
+        test.each([{}, { status: 'deleted' }])('Should validate the status %j', async (body) => {
+            const driver = await createDriver()
+            const response = await call('patch', `/drivers/${driver.id}/status`, body)
+            expect(response.status).toBe(400)
+            expect(response.body.id).toBe('invalid_schema')
+        })
+        test('Should require the deletion confirmation field', async () => {
+            const driver = await createDriver()
+            const response = await call('delete', `/drivers/${driver.id}`, {})
+            expect(response.status).toBe(400)
+            expect(response.body.id).toBe('invalid_schema')
+        })
         test('Should require exact deletion confirmation and block ongoing trips', async () => {
             const { driver } = await linkedTrip()
             expect((await call('delete', `/drivers/${driver.id}`, { confirmation: 'excluir' })).status).toBe(400)
@@ -275,7 +342,7 @@ describe('PATCH status and DELETE driver data (M08/M09)', () => {
             for (const status of ['inactive', 'inactive', 'active', 'active']) {
                 const response = await call('patch', `/drivers/${driver.id}/status`, { status })
                 expect(response.status).toBe(200)
-                expect(response.body.data.status).toBe(status)
+                expect(response.body.data).toMatchObject({ status, tripStatus: 'in_progress' })
                 expect(await VehicleAssignment.count({ where: { driverId: driver.id } })).toBe(0)
                 if (status === 'inactive') {
                     const login = await request(global.app).post('/login').send({ email: driver.email, password: 'Senha123' })

@@ -12,6 +12,8 @@ const ServiceReminder = require('./service-reminder')
 
 User.hasMany(Fleet, { foreignKey: 'managerId', as: 'managedFleets' })
 Fleet.belongsTo(User, { foreignKey: 'managerId', as: 'manager' })
+User.hasMany(User, { foreignKey: 'managerId', as: 'managedDrivers' })
+User.belongsTo(User, { foreignKey: 'managerId', as: 'responsibleManager' })
 
 Fleet.hasMany(Vehicle, { foreignKey: 'fleetId', as: 'vehicles' })
 Vehicle.belongsTo(Fleet, { foreignKey: 'fleetId', as: 'fleet' })

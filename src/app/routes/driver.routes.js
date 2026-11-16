@@ -8,10 +8,9 @@ const SchemaParserMiddleware = require('../middlewares/schema.middleware')
  * @swagger
  * /drivers:
  *   post:
- *     summary: 'Create a driver with a temporary password (S12, D38)'
+ *     summary: Create a driver with a temporary password
  *     description: >-
- *       Shared driver registry for authenticated managers (D38, RF06). Fleet/vehicle ownership remains protected by D27. No direct
- *       manager-driver link.
+ *       Only the driver's responsible manager can access it; other managers get 404.
  *     tags:
  *       - Drivers
  *     security:
@@ -74,10 +73,9 @@ Router.post('/drivers', AuthMiddleware, roleMiddleware('manager'), SchemaParserM
  * @swagger
  * /drivers:
  *   get:
- *     summary: 'List shared drivers (S11, D38)'
+ *     summary: List shared drivers
  *     description: >-
- *       Shared driver registry for authenticated managers (D38, RF06). Fleet/vehicle ownership remains protected by D27. No direct
- *       manager-driver link.
+ *       Only the driver's responsible manager can access it; other managers get 404.
  *     tags:
  *       - Drivers
  *     security:
@@ -142,16 +140,85 @@ Router.post('/drivers', AuthMiddleware, roleMiddleware('manager'), SchemaParserM
  */
 Router.get('/drivers', AuthMiddleware, roleMiddleware('manager'), SchemaParserMiddleware(null, DriverController.querySchema, null, { stringQueryFields: ['search', 'status'] }), DriverController.index)
 
+/**
+ * @swagger
+ * /drivers/link:
+ *   post:
+ *     summary: Link a driver without a responsible manager by their exact email
+ *     description: >-
+ *       The driver becomes managed by the signed-in manager. A driver linked to another manager answers 404, like an unknown email.
+ *     tags:
+ *       - Drivers
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       '200':
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/Driver'
+ *       '400':
+ *         description: invalid_schema
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       '401':
+ *         description: unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       '403':
+ *         description: 'forbidden, account_inactive'
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       '404':
+ *         description: driver_not_found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       '500':
+ *         description: internal_server_error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+Router.post('/drivers/link', AuthMiddleware, roleMiddleware('manager'), SchemaParserMiddleware(DriverController.linkSchema, null, null), DriverController.link)
+
 
 
 /**
  * @swagger
  * '/drivers/{id}':
  *   get:
- *     summary: Get an driver and assignments (S13)
+ *     summary: Get a driver and their assignments
  *     description: >-
- *       Shared driver registry for authenticated managers (D38, RF06). Fleet/vehicle ownership remains protected by D27. No direct
- *       manager-driver link.
+ *       Only the driver's responsible manager can access it; other managers get 404.
  *     tags:
  *       - Drivers
  *     security:
@@ -216,10 +283,9 @@ Router.get('/drivers/:id', AuthMiddleware, roleMiddleware('manager'), SchemaPars
  * @swagger
  * '/drivers/{id}':
  *   put:
- *     summary: Edit driver profile (M07); password changes use the driver profile flow
+ *     summary: Edit a driver profile; the password is changed by the driver
  *     description: >-
- *       Shared driver registry for authenticated managers (D38, RF06). Fleet/vehicle ownership remains protected by D27. No direct
- *       manager-driver link.
+ *       Only the driver's responsible manager can access it; other managers get 404.
  *     tags:
  *       - Drivers
  *     security:
@@ -296,10 +362,9 @@ Router.put('/drivers/:id', AuthMiddleware, roleMiddleware('manager'), SchemaPars
  * @swagger
  * '/drivers/{id}/status':
  *   patch:
- *     summary: 'Idempotent deactivation/reactivation; removes assignments on deactivation (D24, D33, D36)'
+ *     summary: Deactivate or reactivate a driver; deactivation removes their assignments. A deactivated driver keeps tripStatus in_progress until their ongoing trip ends, so the app can warn the manager
  *     description: >-
- *       Shared driver registry for authenticated managers (D38, RF06). Fleet/vehicle ownership remains protected by D27. No direct
- *       manager-driver link.
+ *       Only the driver's responsible manager can access it; other managers get 404.
  *     tags:
  *       - Drivers
  *     security:
@@ -370,10 +435,9 @@ Router.patch('/drivers/:id/status', AuthMiddleware, roleMiddleware('manager'), S
  * @swagger
  * '/drivers/{id}':
  *   delete:
- *     summary: 'Anonymize driver data; confirmation must equal EXCLUIR (M09, D34)'
+ *     summary: Anonymize driver data; confirmation must equal EXCLUIR
  *     description: >-
- *       Shared driver registry for authenticated managers (D38, RF06). Fleet/vehicle ownership remains protected by D27. No direct
- *       manager-driver link.
+ *       Only the driver's responsible manager can access it; other managers get 404.
  *     tags:
  *       - Drivers
  *     security:
@@ -450,10 +514,9 @@ Router.delete('/drivers/:id', AuthMiddleware, roleMiddleware('manager'), SchemaP
  * @swagger
  * '/drivers/{id}/assignments':
  *   delete:
- *     summary: Release current vehicle assignments explicitly (D38); only their fleet manager may release
+ *     summary: Release the driver, removing their assignments and their responsible manager
  *     description: >-
- *       Shared driver registry for authenticated managers (D38, RF06). Fleet/vehicle ownership remains protected by D27. No direct
- *       manager-driver link.
+ *       Only the driver's responsible manager can access it; other managers get 404.
  *     tags:
  *       - Drivers
  *     security:
@@ -498,7 +561,7 @@ Router.delete('/drivers/:id', AuthMiddleware, roleMiddleware('manager'), SchemaP
  *             schema:
  *               $ref: '#/components/schemas/Error'
  *       '409':
- *         description: 'driver_assigned_to_another_manager, driver_has_trip_in_progress'
+ *         description: driver_has_trip_in_progress
  *         content:
  *           application/json:
  *             schema:
@@ -524,10 +587,9 @@ Router.delete('/drivers/:id/assignments', AuthMiddleware, roleMiddleware('manage
  * @swagger
  * '/drivers/{id}/assignments':
  *   put:
- *     summary: 'Replace assignments in one active owned fleet; keep ongoing trip vehicle (S14, D35)'
+ *     summary: Replace assignments within one active fleet; the ongoing trip vehicle must stay
  *     description: >-
- *       Shared driver registry for authenticated managers (D38, RF06). Fleet/vehicle ownership remains protected by D27. No direct
- *       manager-driver link.
+ *       Only the driver's responsible manager can access it; other managers get 404.
  *     tags:
  *       - Drivers
  *     security:
@@ -572,7 +634,7 @@ Router.delete('/drivers/:id/assignments', AuthMiddleware, roleMiddleware('manage
  *             schema:
  *               $ref: '#/components/schemas/Error'
  *       '409':
- *         description: 'driver_assigned_to_another_manager, driver_has_trip_in_progress, fleet_inactive'
+ *         description: 'driver_inactive, driver_has_trip_in_progress, fleet_inactive'
  *         content:
  *           application/json:
  *             schema:

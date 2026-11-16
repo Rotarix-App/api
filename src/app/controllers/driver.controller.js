@@ -9,6 +9,7 @@ class DriverController {
         this.driverSchema = z.object({ name: fields.name, email: fields.email, phone: fields.phone, cnhNumber: fields.cnhNumber, cnhCategory: fields.cnhCategory })
         this.createSchema = this.driverSchema.extend({ password: fields.password })
         this.paramsSchema = z.object({ id: fields.id })
+        this.linkSchema = z.object({ email: fields.email })
         this.querySchema = z.object({
             search: z.string({ error: 'Informe uma busca válida.' }).trim().max(120, 'A busca deve ter no máximo 120 caracteres.').optional(),
             status: z.enum(['all', 'active', 'inactive'], { error: 'Informe um status válido.' }).default('all')
@@ -27,7 +28,7 @@ class DriverController {
      * @param {express.Response} res
      */
     async store(req, res) {
-        const result = await DriverService.create(req.body)
+        const result = await DriverService.create(req.user.id, req.body)
         if (result.error) return utils.sendError(res, result)
         return res.status(201).json({ error: false, message: 'Motorista cadastrado com sucesso.', data: result })
     }
@@ -37,7 +38,7 @@ class DriverController {
      * @param {express.Response} res
      */
     async index(req, res) {
-        const result = await DriverService.list(req.query)
+        const result = await DriverService.list(req.user.id, req.query)
         if (result.error) return utils.sendError(res, result)
         return res.status(200).json({ error: false, message: 'Motoristas obtidos com sucesso.', data: result })
     }
@@ -47,7 +48,7 @@ class DriverController {
      * @param {express.Response} res
      */
     async show(req, res) {
-        const result = await DriverService.findById(req.params.id)
+        const result = await DriverService.findById(req.params.id, req.user.id)
         if (result.error) return utils.sendError(res, result)
         return res.status(200).json({ error: false, message: 'Motorista obtido com sucesso.', data: result })
     }
@@ -56,8 +57,18 @@ class DriverController {
      * @param {express.Request} req
      * @param {express.Response} res
      */
+    async link(req, res) {
+        const result = await DriverService.link(req.user.id, req.body.email)
+        if (result.error) return utils.sendError(res, result)
+        return res.status(200).json({ error: false, message: 'Motorista vinculado com sucesso.', data: result })
+    }
+
+    /**
+     * @param {express.Request} req
+     * @param {express.Response} res
+     */
     async update(req, res) {
-        const result = await DriverService.update(req.params.id, req.body)
+        const result = await DriverService.update(req.params.id, req.user.id, req.body)
         if (result.error) return utils.sendError(res, result)
         return res.status(200).json({ error: false, message: 'Motorista atualizado com sucesso.', data: result })
     }
@@ -67,7 +78,7 @@ class DriverController {
      * @param {express.Response} res
      */
     async changeStatus(req, res) {
-        const result = await DriverService.changeStatus(req.params.id, req.body.status)
+        const result = await DriverService.changeStatus(req.params.id, req.user.id, req.body.status)
         if (result.error) return utils.sendError(res, result)
         return res.status(200).json({ error: false, message: 'Status do motorista atualizado com sucesso.', data: result })
     }
@@ -77,7 +88,7 @@ class DriverController {
      * @param {express.Response} res
      */
     async destroy(req, res) {
-        const result = await DriverService.destroy(req.params.id, req.body.confirmation)
+        const result = await DriverService.destroy(req.params.id, req.user.id, req.body.confirmation)
         if (result.error) return utils.sendError(res, result)
         return res.status(200).json({ error: false, message: 'Dados do motorista excluídos com sucesso.', data: result })
     }
