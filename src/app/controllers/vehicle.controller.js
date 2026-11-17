@@ -65,6 +65,38 @@ class VehicleController {
      * @param {express.Request} req
      * @param {express.Response} res
      */
+    async indexMine(req, res) {
+        const vehicles = await VehicleService.listForDriver(req.user.id)
+        if (vehicles.error) return utils.sendError(res, vehicles)
+
+        return res.status(200).json({
+            error: false,
+            message: 'Veículos obtidos com sucesso.',
+            data: vehicles
+        })
+    }
+
+    /**
+     *
+     * @param {express.Request} req
+     * @param {express.Response} res
+     */
+    async showMine(req, res) {
+        const vehicle = await VehicleService.findForDriver(req.params.id, req.user.id)
+        if (vehicle.error) return utils.sendError(res, vehicle)
+
+        return res.status(200).json({
+            error: false,
+            message: 'Veículo obtido com sucesso.',
+            data: vehicle
+        })
+    }
+
+    /**
+     *
+     * @param {express.Request} req
+     * @param {express.Response} res
+     */
     async store(req, res) {
         const vehicle = await VehicleService.create(req.user.id, req.body)
         if (vehicle.error) return utils.sendError(res, vehicle)

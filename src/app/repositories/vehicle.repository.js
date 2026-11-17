@@ -130,6 +130,27 @@ class VehicleRepository {
     }
 
     /**
+     * @param {number} driverId
+     * @param {number | undefined} id
+     * @param {object} options
+     */
+    async findAllAssignedToDriver(driverId, id, options = {}) {
+        const vehicles = await Vehicle.findAll({
+            where: id ? { id } : {},
+            include: [
+                { model: User, as: 'assignedDrivers', attributes: [], where: { id: driverId }, through: { attributes: [] } },
+                { model: Fleet, as: 'fleet', attributes: ['id', 'name', 'status'], required: true },
+                { model: Trip, as: 'trips', attributes: ['id', 'driverId', 'startedAt'], where: { status: 'in_progress' }, required: false, include: [UserHistory.include(User)] }
+            ],
+            order: [['plate', 'ASC']],
+            ...options
+        }).catch(utils.logError)
+        if (vehicles === undefined) return utils.error(500, 'internal_server_error', 'Não foi possível consultar os veículos.')
+
+        return vehicles
+    }
+
+    /**
      * @param {number} id
      * @param {number} fleetId
      * @param {object} options

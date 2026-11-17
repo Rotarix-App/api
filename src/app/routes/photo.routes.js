@@ -72,7 +72,7 @@ Router.post('/photos', AuthMiddleware, roleMiddleware('driver'), UploadMiddlewar
  * /photos/{id}:
  *   get:
  *     summary: Download a photo
- *     description: Returns the image bytes. Only the user who uploaded the photo can download it; anyone else gets 404.
+ *     description: Returns the image bytes to the driver who uploaded it, or to the manager who owns the vehicle of the record it belongs to. Anyone else gets 404.
  *     tags: [Photos]
  *     security:
  *       - bearerAuth: []
@@ -99,7 +99,7 @@ Router.post('/photos', AuthMiddleware, roleMiddleware('driver'), UploadMiddlewar
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  *       403:
- *         description: forbidden, account_inactive
+ *         description: account_inactive
  *         content:
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
@@ -114,6 +114,6 @@ Router.post('/photos', AuthMiddleware, roleMiddleware('driver'), UploadMiddlewar
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-Router.get('/photos/:id', AuthMiddleware, roleMiddleware('driver'), SchemaParserMiddleware(null, null, PhotoController.paramsSchema), PhotoController.show)
+Router.get('/photos/:id', AuthMiddleware, SchemaParserMiddleware(null, null, PhotoController.paramsSchema), PhotoController.show)
 
 module.exports = Router

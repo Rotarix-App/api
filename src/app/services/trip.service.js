@@ -6,9 +6,11 @@ const OdometerReadingRepository = require('../repositories/odometer-reading.repo
 const TripRepository = require('../repositories/trip.repository')
 const ExpenseRepository = require('../repositories/expense.repository')
 const RefuelingRepository = require('../repositories/refueling.repository')
+const MaintenanceRepository = require('../repositories/maintenance.repository')
 const AuthService = require('./auth.service')
 const PhotoService = require('./photo.service')
 const utils = require('../utils')
+const records = require('../utils/records')
 const UserHistory = require('../utils/user-history')
 
 const KM_FORMAT = new Intl.NumberFormat('pt-BR')
@@ -35,7 +37,7 @@ class TripService {
             const vehicle = await VehicleRepository.findByIdAndFleetId(vehicleId, fleet.id, { transaction, lock: true })
             if (vehicle.error) return vehicle
 
-            const photo = await PhotoService.checkUnusedOdometerPhoto(odometerPhotoId, driverId, { transaction, lock: true })
+            const photo = await PhotoService.checkUnused(odometerPhotoId, driverId, 'odometer', { transaction })
             if (photo.error) return photo
 
             const stillAssigned = await VehicleRepository.findAssignedToDriver(vehicleId, driverId, { transaction })
@@ -88,7 +90,7 @@ class TripService {
      */
     async finish(id, driverId, { endOdometer, odometerPhotoId, notes }) {
         return this.#write(id, driverId, async ({ trip, vehicle }, transaction) => {
-            const photo = await PhotoService.checkUnusedOdometerPhoto(odometerPhotoId, driverId, { transaction, lock: true })
+            const photo = await PhotoService.checkUnused(odometerPhotoId, driverId, 'odometer', { transaction })
             if (photo.error) return photo
 
             if (endOdometer < vehicle.currentOdometer) return this.#odometerError(vehicle.currentOdometer)
@@ -138,7 +140,7 @@ class TripService {
         const trips = await TripRepository.findAllByDriverId(driverId, status)
         if (trips.error) return trips
 
-        return trips.map((trip) => this.#present(trip))
+        return trips.map((trip) => this.present(trip))
     }
 
     /**
@@ -205,6 +207,17 @@ class TripService {
     }
 
     /**
+     * @param {number} id
+     * @param {number} managerId
+     */
+    async findForManager(id, managerId) {
+        const trip = await TripRepository.findDetailedForManager(id, managerId)
+        if (trip.error) return trip
+
+        return this.#withRecords(trip)
+    }
+
+    /**
      * @param {{ id: number, driverId: number }} conditions
      * @param {object} options
      */
@@ -212,44 +225,36 @@ class TripService {
         const trip = await TripRepository.findDetailed(conditions, options)
         if (trip.error) return trip
 
+        return this.#withRecords(trip, options)
+    }
+
+    /**
+     * @param {object} trip
+     * @param {object} options
+     */
+    async #withRecords(trip, options = {}) {
         const expenses = await ExpenseRepository.findByTripId(trip.id, options)
         if (expenses.error) return expenses
         const refuelings = await RefuelingRepository.findByTripId(trip.id, options)
         if (refuelings.error) return refuelings
+        const maintenances = await MaintenanceRepository.findByTripId(trip.id, options)
+        if (maintenances.error) return maintenances
 
-        const records = [
-            ...expenses.map((expense) => ({
-                type: 'expense',
-                id: expense.id,
-                category: expense.category,
-                amount: this.#money(expense.amount),
-                description: expense.description,
-                liters: null,
-                hasReceipt: expense.receiptPhotoId !== null,
-                createdAt: expense.createdAt
-            })),
-            ...refuelings.map((refueling) => ({
-                type: 'refueling',
-                id: refueling.id,
-                category: 'fuel',
-                amount: this.#money(refueling.totalAmount),
-                description: refueling.gasStation,
-                liters: Number(refueling.liters),
-                hasReceipt: refueling.invoicePhotoId !== null,
-                createdAt: refueling.createdAt
-            }))
-        ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-
-        const presented = this.#present(trip)
-        const totalCents = records.reduce((sum, record) => sum + Math.round(record.amount * 100), 0)
+        const list = records.sort([
+            ...expenses.map((expense) => records.expense(expense)),
+            ...refuelings.map((refueling) => records.refueling(refueling)),
+            ...maintenances.map((maintenance) => records.maintenance(maintenance))
+        ])
+        const presented = this.present(trip)
+        const { total } = records.totals(list)
 
         return {
             ...presented,
-            records,
+            records: list,
             summary: {
-                totalExpenses: totalCents / 100,
-                costPerKm: presented.distanceKm ? Math.round(totalCents / presented.distanceKm) / 100 : null,
-                receiptCount: records.filter((record) => record.hasReceipt).length,
+                totalExpenses: total,
+                costPerKm: presented.distanceKm ? Math.round(records.cents(total) / presented.distanceKm) / 100 : null,
+                receiptCount: list.filter((record) => record.hasReceipt).length,
                 odometerPhotoCount: [trip.startReading?.photoId, trip.endReading?.photoId].filter(Boolean).length
             }
         }
@@ -258,7 +263,7 @@ class TripService {
     /**
      * @param {object} trip
      */
-    #present(trip) {
+    present(trip) {
         const startOdometer = trip.startReading?.valueKm ?? null
         const endOdometer = trip.endReading?.valueKm ?? null
         const endedAt = trip.endedAt ? new Date(trip.endedAt) : new Date()
@@ -277,15 +282,9 @@ class TripService {
             startPhotoId: trip.startReading?.photoId ?? null,
             endPhotoId: trip.endReading?.photoId ?? null,
             startedAt: trip.startedAt,
-            endedAt: trip.endedAt
+            endedAt: trip.endedAt,
+            ...(Object.hasOwn(trip.dataValues || trip, 'driver') ? { driver: UserHistory.present(trip.driver) } : {})
         }
-    }
-
-    /**
-     * @param {string | number} value
-     */
-    #money(value) {
-        return Math.round(Number(value) * 100) / 100
     }
 
     /**

@@ -320,4 +320,97 @@ Router.patch('/vehicles/:id/status', AuthMiddleware, roleMiddleware('manager'), 
  */
 Router.delete('/vehicles/:id', AuthMiddleware, roleMiddleware('manager'), SchemaParserMiddleware(VehicleController.deleteSchema, null, VehicleController.paramsSchema), VehicleController.destroy)
 
+/**
+ * @swagger
+ * /users/@me/vehicles:
+ *   get:
+ *     summary: The driver's assigned vehicles
+ *     description: >-
+ *       `tripStatus` is `on_trip` for the driver's own trip, `unavailable` when another driver has it on a trip (with that driver's name), `inactive` when the vehicle or its fleet is inactive, otherwise `free`.
+ *     tags: [Vehicles]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error: { type: boolean, example: false }
+ *                 message: { type: string }
+ *                 data: { type: array, items: { $ref: '#/components/schemas/DriverVehicle' } }
+ *       401:
+ *         description: unauthorized
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       403:
+ *         description: forbidden, account_inactive
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       500:
+ *         description: internal_server_error
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ */
+Router.get('/users/@me/vehicles', AuthMiddleware, roleMiddleware('driver'), VehicleController.indexMine)
+
+/**
+ * @swagger
+ * /users/@me/vehicles/{id}:
+ *   get:
+ *     summary: One of the driver's assigned vehicles with its last reading, alerts and recent history
+ *     description: >-
+ *       Recent trips and refuelings are the driver's own on this vehicle. Unassigned vehicles answer 404.
+ *     tags: [Vehicles]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer, minimum: 1, maximum: 2147483647 }
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error: { type: boolean, example: false }
+ *                 message: { type: string }
+ *                 data: { $ref: '#/components/schemas/DriverVehicleDetail' }
+ *       400:
+ *         description: invalid_schema
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       401:
+ *         description: unauthorized
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       403:
+ *         description: forbidden, account_inactive
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       404:
+ *         description: vehicle_not_found
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       500:
+ *         description: internal_server_error
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ */
+Router.get('/users/@me/vehicles/:id', AuthMiddleware, roleMiddleware('driver'), SchemaParserMiddleware(null, null, VehicleController.paramsSchema), VehicleController.showMine)
+
 module.exports = Router

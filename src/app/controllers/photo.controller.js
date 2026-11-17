@@ -37,7 +37,7 @@ class PhotoController {
      * @param {express.Response} res
      */
     async show(req, res) {
-        const file = await PhotoService.findFile(req.params.id, req.user.id)
+        const file = await PhotoService.findFile(req.params.id, req.user)
         if (file.error) return utils.sendError(res, file)
 
         res.set('Cache-Control', 'private, max-age=86400')

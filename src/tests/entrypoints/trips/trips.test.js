@@ -334,7 +334,7 @@ describe('GET /trips/:id', () => {
             expect(response.body.data.records).toEqual(expect.arrayContaining([
                 expect.objectContaining({ type: 'expense', category: 'toll', amount: 48.3, hasReceipt: true }),
                 expect.objectContaining({ type: 'expense', category: 'food', amount: 42, hasReceipt: false }),
-                expect.objectContaining({ type: 'refueling', category: 'fuel', amount: 1412.4, liters: 220, description: 'Posto Graal', hasReceipt: true })
+                expect.objectContaining({ type: 'refueling', category: 'fuel', amount: 1412.4, liters: 220, gasStation: 'Posto Graal', hasReceipt: true })
             ]))
             expect(response.body.data).toMatchObject({
                 distanceKm: 639,

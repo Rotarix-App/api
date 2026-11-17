@@ -362,6 +362,7 @@ const options = {
                                         hasPhoto: { type: 'boolean' },
                                     },
                                 },
+                                serviceAlerts: { type: 'array', items: { $ref: '#/components/schemas/ServiceReminder' }, description: 'Pending reminders, nearest first.' },
                                 trip: {
                                     type: 'object',
                                     nullable: true,
@@ -452,25 +453,13 @@ const options = {
                             properties: {
                                 records: {
                                     type: 'array',
-                                    description: 'Expenses and refuelings linked to the trip, newest first.',
-                                    items: {
-                                        type: 'object',
-                                        properties: {
-                                            type: { type: 'string', enum: ['expense', 'refueling'] },
-                                            id: { type: 'integer' },
-                                            category: { type: 'string', enum: ['fuel', 'toll', 'food', 'tire_repair', 'urgent_maintenance'] },
-                                            amount: { type: 'number', example: 48.3 },
-                                            description: { type: 'string', nullable: true, description: 'The gas station for refuelings.' },
-                                            liters: { type: 'number', nullable: true },
-                                            hasReceipt: { type: 'boolean' },
-                                            createdAt: { type: 'string', format: 'date-time' },
-                                        },
-                                    },
+                                    description: 'Expenses, refuelings and maintenances linked to the trip, newest first.',
+                                    items: { $ref: '#/components/schemas/Record' },
                                 },
                                 summary: {
                                     type: 'object',
                                     properties: {
-                                        totalExpenses: { type: 'number', example: 1502.7, description: 'Expenses plus refuelings.' },
+                                        totalExpenses: { type: 'number', example: 1502.7, description: 'Expenses, refuelings and maintenances.' },
                                         costPerKm: { type: 'number', nullable: true, example: 2.35, description: 'Null until the trip has a distance.' },
                                         receiptCount: { type: 'integer' },
                                         odometerPhotoCount: { type: 'integer', description: 'Start and end odometer photos.' },
@@ -493,6 +482,281 @@ const options = {
                         status: { type: 'string', enum: ['active', 'inactive'] },
                         createdAt: { type: 'string', format: 'date-time' },
                         updatedAt: { type: 'string', format: 'date-time' },
+                    },
+                },
+                RecordVehicle: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'integer' },
+                        plate: { type: 'string' },
+                        brand: { type: 'string' },
+                        model: { type: 'string' },
+                    },
+                },
+                RecordTrip: {
+                    type: 'object',
+                    nullable: true,
+                    properties: {
+                        id: { type: 'integer' },
+                        origin: { type: 'string' },
+                        destination: { type: 'string' },
+                        status: { type: 'string', enum: ['in_progress', 'finished', 'cancelled'] },
+                    },
+                },
+                ExpenseInput: {
+                    type: 'object',
+                    required: ['category', 'amount'],
+                    properties: {
+                        vehicleId: { type: 'integer', description: 'Required outside a trip; ignored during one.' },
+                        category: { type: 'string', enum: ['toll', 'food', 'tire_repair', 'urgent_maintenance'] },
+                        amount: { type: 'number', minimum: 0.01, example: 48.3 },
+                        description: { type: 'string', maxLength: 255, nullable: true },
+                        receiptPhotoId: { type: 'integer', nullable: true, description: 'An unused receipt photo uploaded by the driver.' },
+                    },
+                },
+                ExpenseUpdateInput: {
+                    type: 'object',
+                    required: ['category', 'amount'],
+                    properties: {
+                        category: { type: 'string', enum: ['toll', 'food', 'tire_repair', 'urgent_maintenance'] },
+                        amount: { type: 'number', minimum: 0.01 },
+                        description: { type: 'string', maxLength: 255, nullable: true },
+                        receiptPhotoId: { type: 'integer', nullable: true, description: 'Omit to keep the receipt, null to remove it.' },
+                    },
+                },
+                RefuelingInput: {
+                    type: 'object',
+                    required: ['liters', 'pricePerLiter', 'odometer', 'gasStation', 'odometerPhotoId'],
+                    properties: {
+                        vehicleId: { type: 'integer', description: 'Required outside a trip; ignored during one.' },
+                        liters: { type: 'number', minimum: 0.01, maximum: 9999.99, example: 220 },
+                        pricePerLiter: { type: 'number', minimum: 0.001, maximum: 99.999, example: 6.42 },
+                        odometer: { type: 'integer', minimum: 0, maximum: 9999999 },
+                        gasStation: { type: 'string', maxLength: 120 },
+                        odometerPhotoId: { type: 'integer' },
+                        invoicePhotoId: { type: 'integer', nullable: true },
+                    },
+                },
+                MaintenanceInput: {
+                    type: 'object',
+                    required: ['type', 'service', 'amount', 'workshop', 'odometer', 'odometerPhotoId'],
+                    properties: {
+                        vehicleId: { type: 'integer', description: 'Required outside a trip; ignored during one.' },
+                        type: { type: 'string', enum: ['preventive', 'corrective', 'urgent'] },
+                        service: { type: 'string', maxLength: 255 },
+                        amount: { type: 'number', minimum: 0.01 },
+                        workshop: { type: 'string', maxLength: 120 },
+                        odometer: { type: 'integer', minimum: 0, maximum: 9999999 },
+                        odometerPhotoId: { type: 'integer' },
+                        invoicePhotoId: { type: 'integer', nullable: true },
+                    },
+                },
+                Record: {
+                    type: 'object',
+                    description: 'An expense, refueling or maintenance. Refuelings use category fuel and maintenances urgent_maintenance. driver is present only in manager views.',
+                    properties: {
+                        type: { type: 'string', enum: ['expense', 'refueling', 'maintenance'] },
+                        id: { type: 'integer' },
+                        category: { type: 'string', enum: ['fuel', 'toll', 'food', 'tire_repair', 'urgent_maintenance'] },
+                        amount: { type: 'number' },
+                        hasReceipt: { type: 'boolean' },
+                        vehicle: { allOf: [{ $ref: '#/components/schemas/RecordVehicle' }], nullable: true },
+                        trip: { $ref: '#/components/schemas/RecordTrip' },
+                        driver: { $ref: '#/components/schemas/FleetDriverSummary' },
+                        createdAt: { type: 'string', format: 'date-time' },
+                    },
+                },
+                Expense: {
+                    allOf: [
+                        { $ref: '#/components/schemas/Record' },
+                        {
+                            type: 'object',
+                            properties: {
+                                description: { type: 'string', nullable: true },
+                                receiptPhotoId: { type: 'integer', nullable: true },
+                                updatedAt: { type: 'string', format: 'date-time' },
+                            },
+                        },
+                    ],
+                },
+                Refueling: {
+                    allOf: [
+                        { $ref: '#/components/schemas/Record' },
+                        {
+                            type: 'object',
+                            properties: {
+                                liters: { type: 'number' },
+                                pricePerLiter: { type: 'number' },
+                                gasStation: { type: 'string' },
+                                odometer: { type: 'integer' },
+                                odometerPhotoId: { type: 'integer' },
+                                invoicePhotoId: { type: 'integer', nullable: true },
+                            },
+                        },
+                    ],
+                },
+                Maintenance: {
+                    allOf: [
+                        { $ref: '#/components/schemas/Record' },
+                        {
+                            type: 'object',
+                            properties: {
+                                maintenanceType: { type: 'string', enum: ['preventive', 'corrective', 'urgent'] },
+                                service: { type: 'string' },
+                                workshop: { type: 'string' },
+                                odometer: { type: 'integer' },
+                                odometerPhotoId: { type: 'integer' },
+                                invoicePhotoId: { type: 'integer', nullable: true },
+                            },
+                        },
+                    ],
+                },
+                CategoryTotals: {
+                    type: 'object',
+                    properties: {
+                        fuel: { type: 'number' },
+                        toll: { type: 'number' },
+                        food: { type: 'number' },
+                        tire_repair: { type: 'number' },
+                        urgent_maintenance: { type: 'number' },
+                    },
+                },
+                Spending: {
+                    type: 'object',
+                    properties: {
+                        month: { type: 'string', example: '2026-11' },
+                        total: { type: 'number' },
+                        byCategory: { $ref: '#/components/schemas/CategoryTotals' },
+                        expenses: { type: 'array', items: { $ref: '#/components/schemas/Expense' } },
+                        refuelings: { type: 'array', items: { $ref: '#/components/schemas/Refueling' } },
+                        maintenances: { type: 'array', items: { $ref: '#/components/schemas/Maintenance' } },
+                    },
+                },
+                ServiceReminderInput: {
+                    type: 'object',
+                    required: ['title', 'dueOdometer'],
+                    properties: {
+                        title: { type: 'string', maxLength: 60, example: 'Revisão' },
+                        dueOdometer: { type: 'integer', minimum: 0, maximum: 9999999, example: 190000 },
+                        intervalKm: { type: 'integer', minimum: 1, maximum: 1000000, nullable: true, example: 10000 },
+                    },
+                },
+                ServiceReminder: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'integer' },
+                        title: { type: 'string' },
+                        dueOdometer: { type: 'integer' },
+                        intervalKm: { type: 'integer', nullable: true },
+                        remainingKm: { type: 'integer', nullable: true, description: 'Negative when overdue; null once completed.' },
+                        overdue: { type: 'boolean' },
+                        completedAt: { type: 'string', format: 'date-time', nullable: true },
+                        completedMaintenanceId: { type: 'integer', nullable: true },
+                        vehicle: { $ref: '#/components/schemas/RecordVehicle' },
+                    },
+                },
+                DriverVehicle: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'integer' },
+                        plate: { type: 'string' },
+                        brand: { type: 'string' },
+                        model: { type: 'string' },
+                        year: { type: 'integer' },
+                        currentOdometer: { type: 'integer' },
+                        fleet: { type: 'object', properties: { id: { type: 'integer' }, name: { type: 'string' } } },
+                        tripStatus: { type: 'string', enum: ['free', 'on_trip', 'unavailable', 'inactive'] },
+                        trip: {
+                            type: 'object',
+                            nullable: true,
+                            properties: {
+                                id: { type: 'integer', nullable: true, description: 'Only for the driver own trip.' },
+                                startedAt: { type: 'string', format: 'date-time' },
+                                driver: { $ref: '#/components/schemas/FleetDriverSummary' },
+                            },
+                        },
+                        serviceAlert: { allOf: [{ $ref: '#/components/schemas/ServiceReminder' }], nullable: true },
+                    },
+                },
+                DriverVehicleDetail: {
+                    allOf: [
+                        { $ref: '#/components/schemas/DriverVehicle' },
+                        {
+                            type: 'object',
+                            properties: {
+                                lastReading: {
+                                    type: 'object',
+                                    nullable: true,
+                                    properties: {
+                                        valueKm: { type: 'integer' },
+                                        source: { type: 'string', enum: ['manual', 'trip_start', 'trip_end', 'refueling', 'maintenance'] },
+                                        recordedAt: { type: 'string', format: 'date-time' },
+                                        hasPhoto: { type: 'boolean' },
+                                        photoId: { type: 'integer', nullable: true },
+                                    },
+                                },
+                                serviceAlerts: { type: 'array', items: { $ref: '#/components/schemas/ServiceReminder' } },
+                                recentTrips: { type: 'array', items: { $ref: '#/components/schemas/Trip' } },
+                                recentRefuelings: { type: 'array', items: { $ref: '#/components/schemas/Refueling' } },
+                            },
+                        },
+                    ],
+                },
+                ActivityTrip: {
+                    allOf: [
+                        { $ref: '#/components/schemas/Trip' },
+                        { type: 'object', properties: { driver: { $ref: '#/components/schemas/FleetDriverSummary' } } },
+                    ],
+                },
+                ActivityExpenses: {
+                    type: 'object',
+                    properties: {
+                        total: { type: 'number' },
+                        byCategory: { $ref: '#/components/schemas/CategoryTotals' },
+                        items: { type: 'array', items: { $ref: '#/components/schemas/Record' } },
+                    },
+                },
+                ActivityMaintenances: {
+                    type: 'object',
+                    properties: {
+                        total: { type: 'number' },
+                        items: { type: 'array', items: { $ref: '#/components/schemas/Maintenance' } },
+                    },
+                },
+                Metrics: {
+                    type: 'object',
+                    properties: {
+                        period: { type: 'object', properties: { from: { type: 'string', format: 'date-time' }, to: { type: 'string', format: 'date-time' } } },
+                        spend: {
+                            type: 'object',
+                            properties: {
+                                total: { type: 'number' },
+                                byCategory: { $ref: '#/components/schemas/CategoryTotals' },
+                                previousTotal: { type: 'number' },
+                                changePercent: { type: 'number', nullable: true, description: 'Null when the previous period had no spend.' },
+                            },
+                        },
+                        trips: { type: 'integer' },
+                        km: { type: 'integer' },
+                        costPerKm: { type: 'number', nullable: true },
+                        spendSeries: {
+                            type: 'array',
+                            description: '5-day buckets.',
+                            items: { type: 'object', properties: { from: { type: 'string', format: 'date-time' }, to: { type: 'string', format: 'date-time' }, total: { type: 'number' } } },
+                        },
+                        vehicles: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    vehicle: { $ref: '#/components/schemas/RecordVehicle' },
+                                    total: { type: 'number' },
+                                    km: { type: 'integer' },
+                                    costPerKm: { type: 'number', nullable: true },
+                                },
+                            },
+                        },
+                        alerts: { type: 'array', items: { $ref: '#/components/schemas/ServiceReminder' } },
                     },
                 },
                 UserResponse: {

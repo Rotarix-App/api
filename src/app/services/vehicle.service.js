@@ -5,8 +5,12 @@ const VehicleAssignmentRepository = require('../repositories/vehicle-assignment.
 const OdometerReadingRepository = require('../repositories/odometer-reading.repository')
 const TripRepository = require('../repositories/trip.repository')
 const UserRepository = require('../repositories/user.repository')
+const RefuelingRepository = require('../repositories/refueling.repository')
+const ReminderService = require('./reminder.service')
+const TripService = require('./trip.service')
 const utils = require('../utils')
 const UserHistory = require('../utils/user-history')
+const records = require('../utils/records')
 
 const TIME_FORMAT = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' })
 const KM_FORMAT = new Intl.NumberFormat('pt-BR')
@@ -50,17 +54,13 @@ class VehicleService {
         if (trip?.error) return trip
         const drivers = await UserRepository.findDriversByVehicleId(id)
         if (drivers.error) return drivers
+        const alerts = await ReminderService.nextAlerts([vehicle])
+        if (alerts.error) return alerts
 
         return {
             ...this.#present(vehicle, vehicle.fleet, trip),
-            lastReading: lastReading
-                ? {
-                    valueKm: lastReading.valueKm,
-                    source: lastReading.source,
-                    recordedAt: lastReading.createdAt,
-                    hasPhoto: lastReading.photoId !== null
-                }
-                : null,
+            lastReading: this.#reading(lastReading),
+            serviceAlerts: alerts.get(vehicle.id),
             trip: trip
                 ? {
                     id: trip.id,
@@ -74,6 +74,51 @@ class VehicleService {
                 cnhCategory: driver.cnhCategory,
                 tripStatus: driver.trips.length ? 'in_progress' : 'free'
             }))
+        }
+    }
+
+    /**
+     * @param {number} driverId
+     */
+    async listForDriver(driverId) {
+        const vehicles = await VehicleRepository.findAllAssignedToDriver(driverId)
+        if (vehicles.error) return vehicles
+
+        const alerts = await ReminderService.nextAlerts(vehicles)
+        if (alerts.error) return alerts
+
+        return vehicles.map((vehicle) => ({
+            ...this.#presentForDriver(vehicle, driverId),
+            serviceAlert: alerts.get(vehicle.id)[0] || null
+        }))
+    }
+
+    /**
+     * @param {number} id
+     * @param {number} driverId
+     */
+    async findForDriver(id, driverId) {
+        const vehicles = await VehicleRepository.findAllAssignedToDriver(driverId, id)
+        if (vehicles.error) return vehicles
+
+        const vehicle = vehicles[0]
+        if (!vehicle) return utils.error(404, 'vehicle_not_found', 'Veículo não encontrado.')
+
+        const lastReading = await OdometerReadingRepository.findLastByVehicleId(id)
+        if (lastReading?.error) return lastReading
+        const alerts = await ReminderService.nextAlerts([vehicle])
+        if (alerts.error) return alerts
+        const trips = await TripRepository.findRecentByDriverAndVehicle(driverId, id, 5)
+        if (trips.error) return trips
+        const refuelings = await RefuelingRepository.findAll({ driverId, vehicleId: id }, {}, { limit: 5 })
+        if (refuelings.error) return refuelings
+
+        return {
+            ...this.#presentForDriver(vehicle, driverId),
+            lastReading: this.#reading(lastReading),
+            serviceAlerts: alerts.get(vehicle.id),
+            recentTrips: trips.map((trip) => TripService.present(trip)),
+            recentRefuelings: refuelings.map((refueling) => records.refueling(refueling))
         }
     }
 
@@ -236,6 +281,44 @@ class VehicleService {
             available: vehicle.status === 'active' && fleet.status === 'active' && !trip,
             createdAt: vehicle.createdAt,
             updatedAt: vehicle.updatedAt
+        }
+    }
+
+    /**
+     * @param {object} vehicle
+     * @param {number} driverId
+     */
+    #presentForDriver(vehicle, driverId) {
+        const trip = vehicle.trips[0] || null
+        let tripStatus = 'free'
+        if (trip) tripStatus = trip.driverId === driverId ? 'on_trip' : 'unavailable'
+        else if (vehicle.status !== 'active' || vehicle.fleet.status !== 'active') tripStatus = 'inactive'
+
+        return {
+            id: vehicle.id,
+            plate: vehicle.plate,
+            brand: vehicle.brand,
+            model: vehicle.model,
+            year: vehicle.year,
+            currentOdometer: vehicle.currentOdometer,
+            fleet: { id: vehicle.fleet.id, name: vehicle.fleet.name },
+            tripStatus,
+            trip: trip ? { id: trip.driverId === driverId ? trip.id : null, startedAt: trip.startedAt, driver: UserHistory.present(trip.driver) } : null
+        }
+    }
+
+    /**
+     * @param {object | null} reading
+     */
+    #reading(reading) {
+        if (!reading) return null
+
+        return {
+            valueKm: reading.valueKm,
+            source: reading.source,
+            recordedAt: reading.createdAt,
+            hasPhoto: reading.photoId !== null,
+            photoId: reading.photoId
         }
     }
 
