@@ -12,7 +12,7 @@ These rules describe the code as it is today and the conventions for new code. T
 
 ## Stack
 
-Node.js (CommonJS) · Express 5 · Sequelize 6 + mysql2 (MySQL 8) · Zod 4 · jsonwebtoken + bcryptjs · swagger-jsdoc + swagger-ui-express · Jest 30 + Supertest · dotenv · colors.
+Node.js (CommonJS) · Express 5 · Sequelize 6 + mysql2 (MySQL 8) · Zod 4 · multer 2 · jsonwebtoken + bcryptjs · swagger-jsdoc + swagger-ui-express · Jest 30 + Supertest · dotenv · colors.
 
 ## Layout
 
@@ -31,8 +31,8 @@ src/
 │   ├── repositories/            # <name>.repository.js, Sequelize queries
 │   ├── database/index.js        # Sequelize connection (exported first, `connection.ready`), then models/associations.js
 │   ├── database/models/         # 11 Sequelize models, associations.js, index.js (import models from here)
-│   ├── middlewares/             # auth (JWT), role, schema (Zod), logger, private.auth (localhost only)
-│   └── utils/                   # index.js (error, sendError, logError), schemas.js (shared Zod fields)
+│   ├── middlewares/             # auth (JWT), role, schema (Zod), upload (multer), logger, private.auth (localhost only)
+│   └── utils/                   # index.js (error, sendError, logError), schemas.js (shared Zod fields), storage.js (photo files)
 └── tests/                       # see testing rule
 data/db.sql                      # schema script (destructive: drops the database first)
 docs/der/                        # ERD: der.mmd (source), der.png, der.svg
@@ -118,7 +118,7 @@ No linter or formatter is configured, so match the file you are editing:
 
 ## Configuration
 
-- Environment variables through dotenv, read via `process.env.*`: `SERVER_PORT`, `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USERNAME`, `MYSQL_PASSWORD`, `JWT_SECRET`.
+- Environment variables through dotenv, read via `process.env.*`: `SERVER_PORT`, `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USERNAME`, `MYSQL_PASSWORD`, `JWT_SECRET`, `UPLOAD_DIR` (photo folder, default `uploads`).
 - `src/config/environment.js`, shared by `src/index.js` and test globalSetup, loads `.env.test.local` then `.env.test` in test mode, otherwise `.env`. Inherited variables take precedence. Test mode rejects any database other than `rotarix_test` before connecting. The optional `.env.test.local` override is ignored by Git and must never be committed.
 - Add new variables to `.env.example` (and `.env.test` if tests need them) with placeholder values only.
 

@@ -27,6 +27,8 @@ Started 2026-10-18. Every entry here is either stated in the official sources, c
 | **D36** | 2026-11-16 | **Driver status changes are idempotent**, like fleets and vehicles. Reactivation never restores the assignments removed by deactivation (D24); the driver comes back free without vehicles. A deleted driver can't be reactivated. | user | P20 (driver reactivation) |
 | **D37** | 2026-11-16 | **A deleted driver appears in history only as "Motorista removido"**: historical joins include deleted users (paranoid: false) but expose no id, contact or CNH. Photos are kept. Storage keys never contain name, email, phone or CNH. Request logs keep no email or phone. | user | P14 (partly) |
 | **D39** | 2026-11-16 | **An inactive driver can't receive assignments**: 409 `driver_inactive`. Reactivate first, then assign. | user | — |
+| **D40** | 2026-11-16 | **Photos are uploaded separately** (`POST /photos`, multipart, stored on local disk under `UPLOAD_DIR` with an opaque UUID key) and records reference them by id (`odometerPhotoId`). Reusable by expenses, refuelings and maintenance, and lets the app retry only the upload. | user | Partly P10 (storage) |
+| **D41** | 2026-11-16 | **A trip's spend total (S27, S30, cost per km) sums its expenses and refuelings.** Maintenance stays out until P17 is answered. | user | Partly P17 |
 
 Rejected on 2026-11-16: a shared driver registry for all managers (proposed as D38 on 2026-11-11 without the user's confirmation). D32 applies instead.
 
@@ -74,7 +76,7 @@ The repository uses Node.js/CommonJS, Express 5, Sequelize, Zod, JWT/bcryptjs an
 ## Not approved yet
 
 - The development plan in [`progress.md`](progress.md), and the validation criteria in [`requirements-analysis.md`](requirements-analysis.md).
-- No choice yet on hosting, image storage or how service alerts are configured (P09).
+- No choice yet on hosting or how service alerts are configured (P09). Image storage is local disk (D40); backups and a move to object storage are open (RNF04, P15).
 - **Physical schema** ([`data-model.md`](data-model.md), written 2026-10-20 at the user's request): the models and `data/db.sql` exist, but the schema awaits approval. These are applied as proposals:
   - separate tables for refuelings and maintenances (P17, P18);
   - `service_reminders` (P09);
@@ -112,6 +114,15 @@ The repository uses Node.js/CommonJS, Express 5, Sequelize, Zod, JWT/bcryptjs an
   - Managers' CNH fields are ignored. Drivers must send their CNH when they edit their profile (`cnh_required`).
   - Changing the password requires the current one and a confirmation (RF03). The screen isn't designed yet (P20).
   - Deleting an account is blocked with `trip_in_progress` while the driver has a trip in progress (P22).
+
+- **Choices made while building trips and photos** (2026-11-16, applied; review them):
+  - Routes: `POST /photos`, `GET /photos/:id` (uploader only); `POST` and `GET /trips`, `GET /trips/current`, `GET /trips/:id`, `POST /trips/:id/photos`, `POST /trips/:id/finish`, `POST /trips/:id/cancel`. All driver-only; the manager's trip view comes with the activity feed (S18).
+  - Photos: JPEG, PNG or WebP detected from the file bytes (the client's type and name are ignored), up to 10 MB; one record per photo (409 `photo_already_used`); the start/finish photo must be the driver's own and of kind `odometer`. Photos uploaded but never linked stay on disk (no cleanup yet).
+  - `POST /trips/:id/photos` exists so a driver deactivated during the trip (D33) can upload the final odometer photo; `/finish`, `/cancel` and this upload use `AuthMiddleware.forTripAction`, so anyone other than the driver of that trip in progress (managers included, and a trip already ended) gets 404 `trip_not_found`.
+  - Start checks, in order: vehicle assigned to the driver (404), driver active, no trip of the driver (409 `driver_has_trip_in_progress`), vehicle free (409 `vehicle_on_trip`, "Este veículo está em viagem com …"), vehicle and fleet active (409 `vehicle_unavailable`), odometer ≥ current (400 `odometer_below_last_reading`, S25 text).
+  - Locks: start takes the driver row, the fleet, the vehicle, then the photo (same order as the driver and vehicle services); finish/cancel take the vehicle, then the trip. The unique `active_*` columns remain the RN06 backstop.
+  - The history filter is `all` (default, includes cancelled), `in_progress` or `finished` (S29). Duration of a trip in progress is the elapsed time so far; distance and cost per km are null until it's finished. The odometer-photo count covers the trip's start and end photos, as in the S30 sample.
+  - The M18 confirmation is client-side; the API has no field for it.
 
 ## Recording a new decision
 

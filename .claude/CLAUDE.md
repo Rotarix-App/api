@@ -7,7 +7,8 @@ Back end (Node.js · Express 5 · Sequelize/MySQL) for **Rotarix**, a mobile fle
 > - **Built on the `Frotas` branch:** the **fleets** module (S06–S08, M01–M03), without the S08 Resumo tab. Each fleet belongs to the manager who created it (D27).
 > - **Built on the `feat/vehicles` branch:** the manager's **vehicles** module (S09–S10, M04–M06), without service alerts (P09).
 > - **Drivers and assignments:** each driver belongs to one responsible manager (D32, `users.manager_id`); manager-only CRUD, link by email, transactional vehicle assignment and release. D33 middleware is prepared; trip routes remain pending.
-> - **Not started:** trip/expense endpoints, uploads and metrics. Implement one only when the user asks for it.
+> - **Trips and photos (2026-11-16):** the driver's trips (S21–S22, S25–S30, M12–M13, M18): start, history, current trip, detail with summary, finish and cancel, with D33 restricted sessions; photo upload to local disk (D40). The spend total sums expenses and refuelings (D41).
+> - **Not started:** the driver's vehicle list (S23–S24), expense/refueling/maintenance endpoints, metrics and the activity feed. Implement one only when the user asks for it.
 
 **The Figma prototype is the source of truth for functionality** (D09): [Rotarix — Protótipo Mobile](https://www.figma.com/design/dTeXHA65uZrG3dSnWH0rE8/Rotarix-%E2%80%94-Prot%C3%B3tipo-Mobile?node-id=25-2147). Its content is written down in `.claude/docs/prototype.md`.
 
@@ -22,8 +23,8 @@ Back end (Node.js · Express 5 · Sequelize/MySQL) for **Rotarix**, a mobile fle
 | `.claude/rules/testing.md` | Jest/Supertest setup and conventions | When touching `src/tests/`, Jest or CI config |
 | `.claude/docs/prototype.md` | Functional spec of every prototype screen (S01–S39) and modal (M01–M27), with API implications | On demand |
 | `.claude/docs/data-model.md` | Every table and column with its source screen, relationships, constraints and assumptions; the ERD is in `docs/der/` | On demand |
-| `.claude/docs/requirements-analysis.md` | Lookup by task, RF and RNF digest, prototype-vs-docs alignment, open questions P01–P23 | On demand |
-| `.claude/docs/decisions.md` | Confirmed decisions (D01–D39), superseded history and how to record new ones | On demand |
+| `.claude/docs/requirements-analysis.md` | Lookup by task, RF and RNF digest, prototype-vs-docs alignment, open questions P01–P24 | On demand |
+| `.claude/docs/decisions.md` | Confirmed decisions (D01–D41), superseded history and how to record new ones | On demand |
 | `.claude/docs/progress.md` | Work log, what exists in code, known issues, recommended plan | On demand |
 | `.claude/docs/project-brief.md` | Client, timeline, method, assumptions, risks, acceptance criteria | On demand |
 | `.claude/docs/sources/` | The three official documents, **verbatim, in Portuguese** | Only the sections you need |
