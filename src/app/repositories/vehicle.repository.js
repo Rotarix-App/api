@@ -99,6 +99,38 @@ class VehicleRepository {
 
     /**
      * @param {number} id
+     * @param {object} options
+     */
+    async findById(id, options = {}) {
+        const vehicle = await Vehicle.findByPk(id, options).catch(utils.logError)
+        if (vehicle === undefined) return utils.error(500, 'internal_server_error', 'Não foi possível consultar o veículo.')
+        if (!vehicle) return utils.error(404, 'vehicle_not_found', 'Veículo não encontrado.')
+
+        return vehicle
+    }
+
+    /**
+     * @param {number} id
+     * @param {number} driverId
+     * @param {object} options
+     */
+    async findAssignedToDriver(id, driverId, options = {}) {
+        const vehicle = await Vehicle.findOne({
+            where: { id },
+            include: [
+                { model: User, as: 'assignedDrivers', attributes: [], where: { id: driverId }, through: { attributes: [] } },
+                { model: Fleet, as: 'fleet', attributes: ['id', 'status'], required: true }
+            ],
+            ...options
+        }).catch(utils.logError)
+        if (vehicle === undefined) return utils.error(500, 'internal_server_error', 'Não foi possível consultar o veículo.')
+        if (!vehicle) return utils.error(404, 'vehicle_not_found', 'Veículo não encontrado.')
+
+        return vehicle
+    }
+
+    /**
+     * @param {number} id
      * @param {number} fleetId
      * @param {object} options
      */

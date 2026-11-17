@@ -1,5 +1,5 @@
 const { Op, fn, col } = require('sequelize')
-const { Trip, Vehicle, User } = require('../database/models')
+const { Trip, Vehicle, User, OdometerReading } = require('../database/models')
 const utils = require('../utils')
 const UserHistory = require('../utils/user-history')
 
@@ -62,6 +62,96 @@ class TripRepository {
         if (trip === undefined) return utils.error(500, 'internal_server_error', 'Não foi possível consultar as viagens.')
 
         return trip
+    }
+
+    /**
+     * @param {object} conditions
+     * @param {object} options
+     */
+    async findDetailed(conditions, options = {}) {
+        const trip = await Trip.findOne({ where: conditions, include: this.#detailIncludes(), ...options }).catch(utils.logError)
+        if (trip === undefined) return utils.error(500, 'internal_server_error', 'Não foi possível consultar a viagem.')
+        if (!trip) return utils.error(404, 'trip_not_found', 'Viagem não encontrada.')
+
+        return trip
+    }
+
+    /**
+     * @param {number} driverId
+     * @param {'all' | 'in_progress' | 'finished'} status
+     * @param {object} options
+     */
+    async findAllByDriverId(driverId, status, options = {}) {
+        const conditions = { driverId }
+        if (status !== 'all') conditions.status = status
+
+        const trips = await Trip.findAll({
+            where: conditions,
+            include: this.#detailIncludes(),
+            order: [['startedAt', 'DESC'], ['id', 'DESC']],
+            ...options
+        }).catch(utils.logError)
+        if (trips === undefined) return utils.error(500, 'internal_server_error', 'Não foi possível consultar as viagens.')
+
+        return trips
+    }
+
+    /**
+     * @param {number} id
+     * @param {number} driverId
+     * @param {object} options
+     */
+    async findByIdAndDriverId(id, driverId, options = {}) {
+        const trip = await Trip.findOne({ where: { id, driverId }, ...options }).catch(utils.logError)
+        if (trip === undefined) return utils.error(500, 'internal_server_error', 'Não foi possível consultar a viagem.')
+        if (!trip) return utils.error(404, 'trip_not_found', 'Viagem não encontrada.')
+
+        return trip
+    }
+
+    /**
+     * @param {object} data
+     * @param {object} options
+     */
+    async create(data, options = {}) {
+        return Trip.create(data, options).catch((error) => this.#writeError(error, 'Não foi possível iniciar a viagem.'))
+    }
+
+    /**
+     * @param {number} id
+     * @param {object} data
+     * @param {object} options
+     */
+    async update(id, data, options = {}) {
+        const result = await Trip.update(data, { where: { id }, ...options }).catch((error) => this.#writeError(error, 'Não foi possível atualizar a viagem.'))
+        if (result.error) return result
+
+        return true
+    }
+
+    #detailIncludes() {
+        return [
+            { model: Vehicle, as: 'vehicle', attributes: ['id', 'plate', 'brand', 'model'], paranoid: false },
+            { model: OdometerReading, as: 'startReading', attributes: ['id', 'valueKm', 'photoId'] },
+            { model: OdometerReading, as: 'endReading', attributes: ['id', 'valueKm', 'photoId'] }
+        ]
+    }
+
+    /**
+     * @param {Error} error
+     * @param {string} message
+     */
+    #writeError(error, message) {
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            const fields = Object.keys(error.fields || {}).join(' ')
+            if (fields.includes('active_driver')) return utils.error(409, 'driver_has_trip_in_progress', 'Você já tem uma viagem em andamento. Finalize-a antes de iniciar outra.')
+            if (fields.includes('active_vehicle')) return utils.error(409, 'vehicle_on_trip', 'Este veículo já está em viagem.')
+            return utils.error(409, 'photo_already_used', 'Esta foto já foi usada em outro registro. Tire uma nova foto do odômetro.')
+        }
+
+        utils.logError(error)
+
+        return utils.error(500, 'internal_server_error', message)
     }
 }
 

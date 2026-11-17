@@ -9,7 +9,9 @@ class CustomSequencer extends Sequencer {
       "users.test.js",
       "fleets.test.js",
       "vehicles.test.js",
-      "drivers.test.js"
+      "drivers.test.js",
+      "photos.test.js",
+      "trips.test.js"
     ];
 
     return [...tests].sort((a, b) => {

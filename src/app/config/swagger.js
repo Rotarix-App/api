@@ -387,6 +387,99 @@ const options = {
                         },
                     ],
                 },
+                Photo: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'integer' },
+                        kind: { type: 'string', enum: ['odometer', 'receipt', 'invoice'] },
+                        mimeType: { type: 'string', enum: ['image/jpeg', 'image/png', 'image/webp'] },
+                        sizeBytes: { type: 'integer' },
+                        createdAt: { type: 'string', format: 'date-time' },
+                    },
+                },
+                TripStartInput: {
+                    type: 'object',
+                    required: ['vehicleId', 'origin', 'destination', 'startOdometer', 'odometerPhotoId'],
+                    properties: {
+                        vehicleId: { type: 'integer', description: 'A vehicle assigned to the driver.' },
+                        origin: { type: 'string', minLength: 2, maxLength: 120, example: 'Uberlândia, MG' },
+                        destination: { type: 'string', minLength: 2, maxLength: 120, example: 'Santos, SP' },
+                        startOdometer: { type: 'integer', minimum: 0, maximum: 9999999, example: 184302 },
+                        odometerPhotoId: { type: 'integer', description: 'An unused odometer photo uploaded by the driver.' },
+                    },
+                },
+                TripFinishInput: {
+                    type: 'object',
+                    required: ['endOdometer', 'odometerPhotoId'],
+                    properties: {
+                        endOdometer: { type: 'integer', minimum: 0, maximum: 9999999, example: 184941 },
+                        odometerPhotoId: { type: 'integer', description: 'An unused odometer photo uploaded by the driver.' },
+                        notes: { type: 'string', maxLength: 500, nullable: true, example: 'Trânsito intenso na Anchieta' },
+                    },
+                },
+                Trip: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'integer' },
+                        status: { type: 'string', enum: ['in_progress', 'finished', 'cancelled'] },
+                        origin: { type: 'string' },
+                        destination: { type: 'string' },
+                        vehicle: {
+                            type: 'object',
+                            properties: {
+                                id: { type: 'integer' },
+                                plate: { type: 'string' },
+                                brand: { type: 'string' },
+                                model: { type: 'string' },
+                            },
+                        },
+                        startOdometer: { type: 'integer' },
+                        endOdometer: { type: 'integer', nullable: true },
+                        distanceKm: { type: 'integer', nullable: true, description: 'Null until the trip is finished.' },
+                        durationMinutes: { type: 'integer', description: 'Elapsed time so far while the trip is in progress.' },
+                        notes: { type: 'string', nullable: true },
+                        startPhotoId: { type: 'integer', nullable: true },
+                        endPhotoId: { type: 'integer', nullable: true },
+                        startedAt: { type: 'string', format: 'date-time' },
+                        endedAt: { type: 'string', format: 'date-time', nullable: true },
+                    },
+                },
+                TripDetail: {
+                    allOf: [
+                        { $ref: '#/components/schemas/Trip' },
+                        {
+                            type: 'object',
+                            properties: {
+                                records: {
+                                    type: 'array',
+                                    description: 'Expenses and refuelings linked to the trip, newest first.',
+                                    items: {
+                                        type: 'object',
+                                        properties: {
+                                            type: { type: 'string', enum: ['expense', 'refueling'] },
+                                            id: { type: 'integer' },
+                                            category: { type: 'string', enum: ['fuel', 'toll', 'food', 'tire_repair', 'urgent_maintenance'] },
+                                            amount: { type: 'number', example: 48.3 },
+                                            description: { type: 'string', nullable: true, description: 'The gas station for refuelings.' },
+                                            liters: { type: 'number', nullable: true },
+                                            hasReceipt: { type: 'boolean' },
+                                            createdAt: { type: 'string', format: 'date-time' },
+                                        },
+                                    },
+                                },
+                                summary: {
+                                    type: 'object',
+                                    properties: {
+                                        totalExpenses: { type: 'number', example: 1502.7, description: 'Expenses plus refuelings.' },
+                                        costPerKm: { type: 'number', nullable: true, example: 2.35, description: 'Null until the trip has a distance.' },
+                                        receiptCount: { type: 'integer' },
+                                        odometerPhotoCount: { type: 'integer', description: 'Start and end odometer photos.' },
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
                 User: {
                     type: 'object',
                     properties: {

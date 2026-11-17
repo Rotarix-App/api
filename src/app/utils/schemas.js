@@ -11,6 +11,12 @@ module.exports = {
         .transform(Number)
         .pipe(z.number().max(2147483647, 'Informe um identificador válido.')),
 
+    reference: (message) => z
+        .number({ error: message })
+        .int(message)
+        .min(1, message)
+        .max(2147483647, message),
+
     role: z.enum(['manager', 'driver'], { error: 'Escolha o perfil: gestor ou motorista.' }),
 
     name: z

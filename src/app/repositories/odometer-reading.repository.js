@@ -22,10 +22,15 @@ class OdometerReadingRepository {
      * @param {object} options
      */
     async create(data, options = {}) {
-        const reading = await OdometerReading.create(data, options).catch(utils.logError)
-        if (!reading) return utils.error(500, 'internal_server_error', 'Não foi possível registrar a leitura do odômetro.')
+        return OdometerReading.create(data, options).catch((error) => {
+            if (error.name === 'SequelizeUniqueConstraintError') {
+                return utils.error(409, 'photo_already_used', 'Esta foto já foi usada em outro registro. Tire uma nova foto do odômetro.')
+            }
 
-        return reading
+            utils.logError(error)
+
+            return utils.error(500, 'internal_server_error', 'Não foi possível registrar a leitura do odômetro.')
+        })
     }
 }
 
