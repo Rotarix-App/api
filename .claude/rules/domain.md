@@ -53,18 +53,18 @@ A manager only accesses the fleets they created (D27), and so only their vehicle
 - **Fleet** (RF04, D10, D12, D27–D29).
   - Fields: name, **one "base or region" field**, optional description. It belongs to the manager who created it.
   - Deactivating blocks new trips but keeps vehicles, drivers and history; the fleet can be reactivated. Its vehicles keep their own status but are unavailable while it's inactive (D29).
-  - Deleting requires typing the fleet name and can't be undone. It deletes the fleet's vehicles too (history kept) and removes their assignments; it's blocked while any of its vehicles is on a trip (D28).
+  - Deleting requires typing the fleet name in the app (the API doesn't check it, D48) and can't be undone. It deletes the fleet's vehicles too (history kept) and removes their assignments; it's blocked while any of its vehicles is on a trip (D28).
 - **Vehicle** (RF05, D11, D12, D28–D31).
   - Fields: plate, brand, model, year, current odometer, fleet. It's always in a fleet of its manager.
   - Available = active vehicle, active fleet and no trip in progress.
   - Moving it to another fleet removes its assignments. Moving it, changing its odometer, deactivating it and deleting it are blocked during a trip (D30, D31).
   - The manager can only raise the odometer, which records a manual reading (D31).
-  - Deleting requires typing the plate. The vehicle disappears for drivers, while its trips, expenses and photos are kept.
+  - Deleting requires typing the plate in the app (D48). The vehicle disappears for drivers, while its trips, expenses and photos are kept.
   - Service alerts come from odometer readings ("Revisão em 800 km", "Troca de óleo vencida há 420 km"). The manager registers them per vehicle (title, due km, optional interval); a preventive maintenance completes the due one and schedules the next (D47).
 - **Driver** (RF06, D14, D24, D32–D37).
   - Created by a manager (name, email, phone, CNH number, CNH category B/C/D/E, temporary password), who becomes their responsible manager, or through self sign-up, with no manager. A manager links a driver without a manager by exact email (`POST /drivers/link`); there is no listing of drivers without a manager, and another manager's driver answers 404 (D32).
   - Deactivating is allowed during a trip (RF06) and removes assignments; while the trip lasts, `tripStatus` stays `in_progress` so the app warns the manager. Restricted access only permits finishing/cancelling the driver's own ongoing trip (D33), then blocks all access. Idempotent reactivation restores no assignments (D36).
-  - Deleting requires `EXCLUIR`, is blocked during a trip (409 `driver_has_trip_in_progress`, D34), and anonymizes history with only "Motorista removido" (D37).
+  - Deleting requires `EXCLUIR` in the app (D48), is blocked during a trip (409 `driver_has_trip_in_progress`, D34), and anonymizes history with only "Motorista removido" (D37).
 - **Assignment** (RF07, D13, D35, D39).
   - Only the driver's responsible manager assigns them, within that manager's own active fleets. Releasing removes the assignments and leaves the driver without a manager, so another manager can link them by email (D35). Replacement cannot remove the ongoing trip vehicle; release during a trip is blocked (409 `driver_has_trip_in_progress`). An inactive driver can't be assigned (409 `driver_inactive`, D39).
   - A driver works in one fleet at a time, with one or more of its vehicles; a vehicle can have several drivers.
@@ -87,7 +87,7 @@ A manager only accesses the fleets they created (D27), and so only their vehicle
   - Required fields: full name, unique email, password and phone. Drivers also need CNH number and category.
   - Changing the password requires the current one and a confirmation (RF03; the screen isn't designed yet, P20).
   - Logging out forces a new login.
-  - Deleting your account requires typing `EXCLUIR`. Deleting a manager keeps the company's fleets and vehicles.
+  - Deleting your account requires typing `EXCLUIR` in the app (D48). Deleting a manager keeps the company's fleets and vehicles.
 
 ## Statuses
 

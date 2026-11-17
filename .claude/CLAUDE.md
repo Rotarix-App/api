@@ -24,7 +24,7 @@ Back end (Node.js · Express 5 · Sequelize/MySQL) for **Rotarix**, a mobile fle
 | `.claude/docs/prototype.md` | Functional spec of every prototype screen (S01–S39) and modal (M01–M27), with API implications | On demand |
 | `.claude/docs/data-model.md` | Every table and column with its source screen, relationships, constraints and assumptions; the ERD is in `docs/der/` | On demand |
 | `.claude/docs/requirements-analysis.md` | Lookup by task, RF and RNF digest, prototype-vs-docs alignment, open questions P01–P24 | On demand |
-| `.claude/docs/decisions.md` | Confirmed decisions (D01–D47), superseded history and how to record new ones | On demand |
+| `.claude/docs/decisions.md` | Confirmed decisions (D01–D48), superseded history and how to record new ones | On demand |
 | `.claude/docs/progress.md` | Work log, what exists in code, known issues, recommended plan | On demand |
 | `.claude/docs/project-brief.md` | Client, timeline, method, assumptions, risks, acceptance criteria | On demand |
 | `.claude/docs/sources/` | The three official documents, **verbatim, in Portuguese** | Only the sections you need |

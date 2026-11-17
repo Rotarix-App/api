@@ -108,7 +108,7 @@ Comparison done on 2026-10-20 between the official sources (the PDFs and the mar
 | Records with or without a trip; refueling and maintenance have their own forms; refueling counts as Combustível | S21–S22, S32–S34 | D19 |
 | Trip lifecycle: driver cancellation, optional notes on finish, final odometer locked after finishing, trip summary | S28–S30, M12–M13, M18 | D20 |
 | The driver edits and deletes their own expenses | M10–M11 | D21 |
-| Typed confirmations: fleet name, plate, `EXCLUIR` | M03, M06, M09, M15, M17 | D23 |
+| Typed confirmations: fleet name, plate, `EXCLUIR` (checked in the app only) | M03, M06, M09, M15, M17 | D23, D48 |
 | Deleting a manager keeps the company's fleets and vehicles | M15 | D25 |
 | Invoice photo optional for refueling and maintenance | S33–S34 | D26 |
 | Refueling fields: liters, price per liter, computed total, gas station | S33 | D19 |

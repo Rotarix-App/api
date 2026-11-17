@@ -35,6 +35,7 @@ Started 2026-10-18. Every entry here is either stated in the official sources, c
 | **D45** | 2026-11-16 | **Every maintenance (preventive, corrective, urgent) counts in spend totals under the "Manutenção de urgência" category**, shown as maintenance in the breakdown. The trip total includes maintenances too. | user | P17 |
 | **D46** | 2026-11-16 | **Only the driver edits and deletes their own expenses, at any time**; the manager only views. Refuelings and maintenances can't be edited or deleted, because they record odometer readings (RN07). | user | P21 |
 | **D47** | 2026-11-16 | **Service reminders are registered by the manager per vehicle** (title, due odometer, optional interval). A preventive maintenance completes the vehicle's due reminder with the lowest due odometer and, if it has an interval, schedules the next one from the maintenance odometer. The configuration screen still has to be drawn in the Figma. | user | P09 |
+| **D48** | 2026-11-16 | **Typed delete confirmations are checked only in the app.** The fleet name (M03), the plate (M06) and `EXCLUIR` (M09, M15, M17) stay in the app's modals, but `DELETE /fleets/:id`, `/vehicles/:id`, `/drivers/:id` and `/users/@me` take no body and no confirmation field. Changes D23 for the API. | user | — |
 
 Rejected on 2026-11-16: a shared driver registry for all managers (proposed as D38 on 2026-11-11 without the user's confirmation). D32 applies instead.
 
@@ -70,7 +71,7 @@ Screen references (Sxx and Mxx) are explained in [`prototype.md`](prototype.md).
 | D20 | Trip lifecycle: **start** (an assigned vehicle not on a trip, origin, destination, initial odometer ≥ last reading, required photo; the start time is automatic) → **in progress** → **finish** (final odometer, required photo, optional notes, confirmation; the final odometer can't change afterwards) or **cancel** by the driver (ends without an arrival record; expenses kept). A summary follows the finish. | S25–S30, M12, M13, M18 | Partly P12; extends RF10 |
 | D21 | Drivers can edit and delete their own expenses. Deleting removes the amount from the trip's spend and deletes the receipt. | M10–M11 | Extends RF11 (limits: P21) |
 | D22 | Record dates and times are set automatically; no form asks for them. | S25, S32–S35 | Changes RF11 |
-| D23 | Destructive actions need typed confirmation: the fleet name, the plate, or `EXCLUIR` (for deleting driver data and for deleting your own account). | M03, M06, M09, M15, M17 | Details RF03–RF06 |
+| D23 | Destructive actions need typed confirmation: the fleet name, the plate, or `EXCLUIR` (for deleting driver data and for deleting your own account). **Changed by D48:** the app checks it; the API doesn't. | M03, M06, M09, M15, M17 | Details RF03–RF06 |
 | D24 | Deactivating a driver removes their fleet and vehicle assignments and blocks their app access. A trip in progress continues. | M08 | Extends RF06 (open part: P12) |
 | D25 | Deleting a manager's account erases their personal data but keeps the company's fleets and vehicles. | M15 | Partly P14 |
 | D26 | The odometer photo is required for refueling and maintenance; the invoice photo is optional ("recomendado"). | S33–S34 | Partly P10 |
@@ -94,7 +95,7 @@ The repository uses Node.js/CommonJS, Express 5, Sequelize, Zod, JWT/bcryptjs an
   - A fleet belongs to its creator (D27). `managerId` is set from the token and can't be sent in the body.
   - The list filter defaults to `all`. The name search is a literal, case-insensitive substring.
   - Counts exclude soft-deleted vehicles and users, and count drivers once per fleet. `onTripCount` counts vehicles with a trip in progress.
-  - Deleting needs `confirmationName` equal to the stored name, case and spaces included (`400 fleet_name_confirmation_mismatch`). It locks the fleet row and its vehicles, answers `409 fleet_has_trip_in_progress` if any is on a trip, deletes their assignments (soft-deleted vehicles too), soft-deletes the vehicles and deletes the fleet (D28).
+  - Deleting (no confirmation in the API since D48) It locks the fleet row and its vehicles, answers `409 fleet_has_trip_in_progress` if any is on a trip, deletes their assignments (soft-deleted vehicles too), soft-deletes the vehicles and deletes the fleet (D28).
   - Vehicle rows return every assigned driver (`assignedDrivers`) plus the driver of the trip in progress (`tripDriver`), which S08 shows.
   - Vehicle rows also return `available`.
   - `SchemaParserMiddleware` takes a third argument for path params and a `stringQueryFields` option that keeps numeric-looking query values (a search for "00123") as text.
@@ -105,7 +106,7 @@ The repository uses Node.js/CommonJS, Express 5, Sequelize, Zod, JWT/bcryptjs an
   - Year from 1950 to next year; odometer from 0 to 9,999,999 km. The initial odometer is recorded as a manual reading without a photo.
   - A vehicle can be created in, or moved to, an inactive fleet of the same manager; it's then unavailable (D29). Moving it removes its assignments and is blocked during a trip (`409 vehicle_on_trip`).
   - Deactivating keeps the assignments. Reactivation uses the same endpoint (P20).
-  - Deleting needs `confirmationPlate` (case, spaces and hyphen ignored; `400 plate_confirmation_mismatch`) and removes the assignments.
+  - Deleting removes the assignments (no confirmation in the API since D48).
   - The `vehicle_on_trip` message names the driver and the start time in Brasília time, as in M05.
   - `available` = active vehicle, active fleet and no trip in progress. The trips module must use the same rule.
   - Writes lock the fleet(s) first, in id order, then the vehicle. The ownership lookup runs before the transaction, because MariaDB 11.7 (`innodb_snapshot_isolation`) rejects a locking read of a row that changed after the transaction's first plain read.
