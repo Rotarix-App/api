@@ -265,17 +265,6 @@ Router.patch('/vehicles/:id/status', AuthMiddleware, roleMiddleware('manager'), 
  *         name: id
  *         required: true
  *         schema: { type: integer, minimum: 1, maximum: 2147483647 }
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [confirmationPlate]
- *             properties:
- *               confirmationPlate:
- *                 type: string
- *                 description: The vehicle's plate. Case, spaces and the hyphen are ignored.
  *     responses:
  *       200:
  *         description: Success
@@ -288,7 +277,7 @@ Router.patch('/vehicles/:id/status', AuthMiddleware, roleMiddleware('manager'), 
  *                 message: { type: string }
  *                 data: { type: object, example: {} }
  *       400:
- *         description: invalid_schema, plate_confirmation_mismatch
+ *         description: invalid_schema
  *         content:
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
@@ -318,7 +307,7 @@ Router.patch('/vehicles/:id/status', AuthMiddleware, roleMiddleware('manager'), 
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-Router.delete('/vehicles/:id', AuthMiddleware, roleMiddleware('manager'), SchemaParserMiddleware(VehicleController.deleteSchema, null, VehicleController.paramsSchema), VehicleController.destroy)
+Router.delete('/vehicles/:id', AuthMiddleware, roleMiddleware('manager'), SchemaParserMiddleware(null, null, VehicleController.paramsSchema), VehicleController.destroy)
 
 /**
  * @swagger

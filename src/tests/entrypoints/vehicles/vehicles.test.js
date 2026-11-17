@@ -64,7 +64,7 @@ const endpoints = [
     ['get', '/vehicles/1', undefined],
     ['put', '/vehicles/1', vehicleBody(1)],
     ['patch', '/vehicles/1/status', { status: 'inactive' }],
-    ['delete', '/vehicles/1', { confirmationPlate: 'ABC1D23' }]
+    ['delete', '/vehicles/1', undefined]
 ]
 
 describe.each(endpoints)('%s %s access', (method, path, body) => {
@@ -111,7 +111,7 @@ describe.each([
     ['get', '', () => undefined],
     ['put', '', (vehicle, fleet) => ({ ...editBody(vehicle), brand: 'Volvo', fleetId: fleet.id })],
     ['patch', '/status', () => ({ status: 'inactive' })],
-    ['delete', '', (vehicle) => ({ confirmationPlate: vehicle.plate })]
+    ['delete', '', () => undefined]
 ])('%s /vehicles/:id%s ownership', (method, suffix, buildBody) => {
     describe('errors', () => {
         test('Should return 404 for a vehicle in another manager\'s fleet and leave it unchanged', async () => {
@@ -390,26 +390,9 @@ describe('PATCH /vehicles/:id/status', () => {
 
 describe('DELETE /vehicles/:id', () => {
     describe('errors', () => {
-        test('Should require a confirmation body', async () => {
-            const fleet = await createFleet(manager.user.id)
-            const vehicle = await createVehicle(fleet.id)
-            const response = await call('delete', `/vehicles/${vehicle.id}`, {})
-            expect(response.status).toBe(400)
-            expect(response.body.id).toBe('invalid_schema')
-        })
-
-        test('Should reject a different plate and keep the vehicle', async () => {
-            const fleet = await createFleet(manager.user.id)
-            const vehicle = await createVehicle(fleet.id)
-            const response = await call('delete', `/vehicles/${vehicle.id}`, { confirmationPlate: randomPlate() })
-            expect(response.status).toBe(400)
-            expect(response.body.id).toBe('plate_confirmation_mismatch')
-            expect(await Vehicle.findByPk(vehicle.id)).not.toBeNull()
-        })
-
         test('Should block deletion during a trip', async () => {
             const { vehicle } = await createLinkedFleet(manager.user.id)
-            const response = await call('delete', `/vehicles/${vehicle.id}`, { confirmationPlate: vehicle.plate })
+            const response = await call('delete', `/vehicles/${vehicle.id}`)
             expect(response.status).toBe(409)
             expect(response.body.id).toBe('vehicle_on_trip')
             expect(await Vehicle.findByPk(vehicle.id)).not.toBeNull()
@@ -421,8 +404,7 @@ describe('DELETE /vehicles/:id', () => {
         test('Should delete the vehicle and its assignments, keeping its history', async () => {
             const { vehicle, trip, reading } = await createLinkedFleet(manager.user.id)
             await finishTrip(trip)
-            const confirmationPlate = `${vehicle.plate.slice(0, 3)}-${vehicle.plate.slice(3)}`.toLowerCase()
-            const response = await call('delete', `/vehicles/${vehicle.id}`, { confirmationPlate })
+            const response = await call('delete', `/vehicles/${vehicle.id}`)
             expect(response.status).toBe(200)
             expect(response.body.data).toEqual({})
             expect(await Vehicle.findByPk(vehicle.id)).toBeNull()
@@ -437,8 +419,8 @@ describe('DELETE /vehicles/:id', () => {
             const fleet = await createFleet(manager.user.id)
             const vehicle = await createVehicle(fleet.id)
             const responses = await Promise.all([
-                call('delete', `/vehicles/${vehicle.id}`, { confirmationPlate: vehicle.plate }),
-                call('delete', `/vehicles/${vehicle.id}`, { confirmationPlate: vehicle.plate })
+                call('delete', `/vehicles/${vehicle.id}`),
+                call('delete', `/vehicles/${vehicle.id}`)
             ])
             expect(responses.map((response) => response.status).sort()).toEqual([200, 404])
         })

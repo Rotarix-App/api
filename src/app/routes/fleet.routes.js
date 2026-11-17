@@ -295,19 +295,6 @@ Router.patch('/fleets/:id/status', AuthMiddleware, roleMiddleware('manager'), Sc
  *         name: id
  *         required: true
  *         schema: { type: integer, minimum: 1, maximum: 2147483647 }
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [confirmationName]
- *             properties:
- *               confirmationName:
- *                 type: string
- *                 minLength: 1
- *                 maxLength: 100
- *                 description: Exact current fleet name, including case and spaces. Checked under a row lock.
  *     responses:
  *       200:
  *         description: Success
@@ -320,7 +307,7 @@ Router.patch('/fleets/:id/status', AuthMiddleware, roleMiddleware('manager'), Sc
  *                 message: { type: string }
  *                 data: { type: object, example: {} }
  *       400:
- *         description: invalid_schema, fleet_name_confirmation_mismatch
+ *         description: invalid_schema
  *         content:
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
@@ -350,7 +337,7 @@ Router.patch('/fleets/:id/status', AuthMiddleware, roleMiddleware('manager'), Sc
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-Router.delete('/fleets/:id', AuthMiddleware, roleMiddleware('manager'), SchemaParserMiddleware(FleetController.deleteSchema, null, FleetController.paramsSchema), FleetController.destroy)
+Router.delete('/fleets/:id', AuthMiddleware, roleMiddleware('manager'), SchemaParserMiddleware(null, null, FleetController.paramsSchema), FleetController.destroy)
 
 /**
  * @swagger

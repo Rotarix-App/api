@@ -54,7 +54,7 @@ describe('Driver permissions', () => {
             const vehicle = await createVehicle(fleet.id)
             for (const [method, suffix, body] of [
                 ['get', '', undefined], ['put', '', driver.payload], ['patch', '/status', { status: 'inactive' }],
-                ['delete', '', { confirmation: 'EXCLUIR' }], ['delete', '/assignments', undefined],
+                ['delete', '', undefined], ['delete', '/assignments', undefined],
                 ['put', '/assignments', { fleetId: fleet.id, vehicleIds: [vehicle.id] }]
             ]) {
                 const response = await call(method, `/drivers/${driver.id}${suffix}`, body, other.token)
@@ -82,7 +82,7 @@ describe('Driver permissions', () => {
             const vehicle = await createVehicle(fleet.id)
             for (const [method, suffix, body] of [
                 ['get', '', undefined], ['put', '', driver.payload], ['patch', '/status', { status: 'inactive' }],
-                ['delete', '', { confirmation: 'EXCLUIR' }], ['delete', '/assignments', undefined],
+                ['delete', '', undefined], ['delete', '/assignments', undefined],
                 ['put', '/assignments', { fleetId: fleet.id, vehicleIds: [vehicle.id] }]
             ]) {
                 const response = await call(method, `/drivers/${id}${suffix}`, body, other.token)
@@ -322,16 +322,9 @@ describe('PATCH /drivers/:id/status and DELETE /drivers/:id', () => {
             expect(response.status).toBe(400)
             expect(response.body.id).toBe('invalid_schema')
         })
-        test('Should require the deletion confirmation field', async () => {
-            const driver = await createDriver()
-            const response = await call('delete', `/drivers/${driver.id}`, {})
-            expect(response.status).toBe(400)
-            expect(response.body.id).toBe('invalid_schema')
-        })
-        test('Should require exact deletion confirmation and block ongoing trips', async () => {
+        test('Should block deletion during an ongoing trip', async () => {
             const { driver } = await linkedTrip()
-            expect((await call('delete', `/drivers/${driver.id}`, { confirmation: 'excluir' })).status).toBe(400)
-            const response = await call('delete', `/drivers/${driver.id}`, { confirmation: 'EXCLUIR' })
+            const response = await call('delete', `/drivers/${driver.id}`)
             expect(response.status).toBe(409)
             expect(response.body.id).toBe('driver_has_trip_in_progress')
         })
@@ -361,7 +354,7 @@ describe('PATCH /drivers/:id/status and DELETE /drivers/:id', () => {
             await finishTrip(trip)
             const photo = await Photo.create({ kind: 'receipt', storageKey: `receipts/${randomUUID()}`, mimeType: 'image/jpeg', sizeBytes: 150, uploadedBy: driver.id })
             const expense = await Expense.create({ driverId: driver.id, vehicleId: vehicle.id, tripId: trip.id, category: 'toll', amount: 10, receiptPhotoId: photo.id })
-            const response = await call('delete', `/drivers/${driver.id}`, { confirmation: 'EXCLUIR' })
+            const response = await call('delete', `/drivers/${driver.id}`)
             expect(response.status).toBe(200)
             const removed = await User.findByPk(driver.id, { paranoid: false })
             expect(removed.deletedAt).not.toBeNull()

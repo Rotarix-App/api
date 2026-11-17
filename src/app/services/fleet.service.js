@@ -94,14 +94,9 @@ class FleetService {
     /**
      * @param {number} id
      * @param {number} managerId
-     * @param {string} confirmationName
      */
-    async destroy(id, managerId, confirmationName) {
+    async destroy(id, managerId) {
         return this.#write(id, managerId, async (fleet, transaction) => {
-            if (confirmationName !== fleet.name) {
-                return utils.error(400, 'fleet_name_confirmation_mismatch', 'O nome informado não confere com o nome da frota.')
-            }
-
             const vehicleIds = await VehicleRepository.findIdsByFleetId(id, { transaction, lock: true })
             if (vehicleIds.error) return vehicleIds
 

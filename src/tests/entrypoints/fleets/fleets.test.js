@@ -36,7 +36,7 @@ const endpoints = [
     ['get', '/fleets/1', undefined],
     ['put', '/fleets/1', { name: 'Test Fleet', baseRegion: 'MG' }],
     ['patch', '/fleets/1/status', { status: 'inactive' }],
-    ['delete', '/fleets/1', { confirmationName: 'Test Fleet' }],
+    ['delete', '/fleets/1', undefined],
     ['get', '/fleets/1/vehicles', undefined],
     ['get', '/fleets/1/drivers', undefined]
 ]
@@ -324,26 +324,9 @@ describe('PATCH /fleets/:id/status', () => {
 
 describe('DELETE /fleets/:id', () => {
     describe('errors', () => {
-        test('Should require a confirmation body', async () => {
-            const response = await call('delete', '/fleets/1', {})
-            expect(response.status).toBe(400)
-            expect(response.body.id).toBe('invalid_schema')
-        })
-
-        test('Should compare the exact name and leave data untouched on mismatch', async () => {
-            const { fleet, vehicle } = await createLinkedFleet(manager.user.id, { name: 'Exact Name' })
-            for (const name of ['exact name', 'Exact Name ', 'Wrong']) {
-                const response = await call('delete', `/fleets/${fleet.id}`, { confirmationName: name })
-                expect(response.status).toBe(400)
-                expect(response.body.id).toBe('fleet_name_confirmation_mismatch')
-            }
-            expect(await Fleet.findByPk(fleet.id)).not.toBeNull()
-            expect(await VehicleAssignment.count({ where: { vehicleId: vehicle.id } })).toBe(1)
-        })
-
         test('Should block deletion while a vehicle of the fleet is on a trip', async () => {
             const { fleet, vehicle } = await createLinkedFleet(manager.user.id)
-            const response = await call('delete', `/fleets/${fleet.id}`, { confirmationName: fleet.name })
+            const response = await call('delete', `/fleets/${fleet.id}`)
             expect(response.status).toBe(409)
             expect(response.body.id).toBe('fleet_has_trip_in_progress')
             expect(await Fleet.findByPk(fleet.id)).not.toBeNull()
@@ -356,7 +339,7 @@ describe('DELETE /fleets/:id', () => {
             await finishTrip(trip)
             jest.spyOn(console, 'log').mockImplementation(() => {})
             jest.spyOn(Fleet, 'destroy').mockRejectedValueOnce(new Error('Injected deletion failure'))
-            const response = await call('delete', `/fleets/${fleet.id}`, { confirmationName: fleet.name })
+            const response = await call('delete', `/fleets/${fleet.id}`)
             expect(response.status).toBe(500)
             expect(response.body.id).toBe('internal_server_error')
             expect(await Fleet.findByPk(fleet.id)).not.toBeNull()
@@ -368,7 +351,7 @@ describe('DELETE /fleets/:id', () => {
     describe('success', () => {
         test('Should delete an empty fleet', async () => {
             const fleet = await createFleet(manager.user.id)
-            const response = await call('delete', `/fleets/${fleet.id}`, { confirmationName: fleet.name })
+            const response = await call('delete', `/fleets/${fleet.id}`)
             expect(response.status).toBe(200)
             expect(response.body.data).toEqual({})
             expect(await Fleet.findByPk(fleet.id)).toBeNull()
@@ -390,7 +373,7 @@ describe('DELETE /fleets/:id', () => {
             const maintenanceReading = await OdometerReading.create({ vehicleId: vehicle.id, recordedBy: assignedDriver.id, valueKm: 0, source: 'maintenance' })
             const maintenance = await Maintenance.create({ vehicleId: vehicle.id, driverId: assignedDriver.id, tripId: trip.id, odometerReadingId: maintenanceReading.id, type: 'urgent', service: 'Tire repair', amount: 20, workshop: 'Test' })
 
-            const response = await call('delete', `/fleets/${fleet.id}`, { confirmationName: fleet.name })
+            const response = await call('delete', `/fleets/${fleet.id}`)
             expect(response.status).toBe(200)
             expect(await Fleet.findByPk(fleet.id)).toBeNull()
             expect(await Vehicle.findByPk(vehicle.id)).toBeNull()
@@ -412,20 +395,20 @@ describe('DELETE /fleets/:id', () => {
             const { fleet, trip } = await createLinkedFleet(manager.user.id)
             await finishTrip(trip)
             const responses = await Promise.all([
-                call('delete', `/fleets/${fleet.id}`, { confirmationName: fleet.name }),
-                call('delete', `/fleets/${fleet.id}`, { confirmationName: fleet.name })
+                call('delete', `/fleets/${fleet.id}`),
+                call('delete', `/fleets/${fleet.id}`)
             ])
             expect(responses.map(response => response.status).sort()).toEqual([200, 404])
         })
 
-        test('Should serialize renaming with confirmation against the current name', async () => {
+        test('Should serialize renaming and deletion', async () => {
             const fleet = await createFleet(manager.user.id)
             const [renamed, deleted] = await Promise.all([
                 call('put', `/fleets/${fleet.id}`, { name: 'Renamed Fleet', baseRegion: 'MG' }),
-                call('delete', `/fleets/${fleet.id}`, { confirmationName: fleet.name })
+                call('delete', `/fleets/${fleet.id}`)
             ])
-            expect([[200, 400], [404, 200]]).toContainEqual([renamed.status, deleted.status])
-            if (renamed.status === 200) expect(deleted.body.id).toBe('fleet_name_confirmation_mismatch')
+            expect([[200, 200], [404, 200]]).toContainEqual([renamed.status, deleted.status])
+            expect(await Fleet.findByPk(fleet.id)).toBeNull()
         })
     })
 })

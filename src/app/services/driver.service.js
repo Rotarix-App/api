@@ -91,11 +91,9 @@ class DriverService {
     /**
      * @param {number} id
      * @param {number} managerId
-     * @param {string} confirmation
      */
-    async destroy(id, managerId, confirmation) {
+    async destroy(id, managerId) {
         return this.#write({ id, managerId }, async (driver, transaction) => {
-            if (confirmation !== 'EXCLUIR') return utils.error(400, 'confirmation_mismatch', 'Digite EXCLUIR para confirmar a exclusão.')
             const trip = await TripRepository.findInProgressByDriverId(id, { transaction })
             if (trip?.error) return trip
             if (trip) return this.#tripError()

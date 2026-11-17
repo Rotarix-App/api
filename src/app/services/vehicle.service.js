@@ -180,14 +180,9 @@ class VehicleService {
     /**
      * @param {number} id
      * @param {number} managerId
-     * @param {string} confirmationPlate
      */
-    async destroy(id, managerId, confirmationPlate) {
-        return this.#write(id, managerId, [], async ({ vehicle, trip }, transaction) => {
-            if (confirmationPlate !== vehicle.plate) {
-                return utils.error(400, 'plate_confirmation_mismatch', 'A placa informada não confere com a placa do veículo.')
-            }
-
+    async destroy(id, managerId) {
+        return this.#write(id, managerId, [], async ({ trip }, transaction) => {
             if (trip) return this.#onTripError(trip, 'excluí-lo')
 
             const assignments = await VehicleAssignmentRepository.deleteByVehicleIds([id], { transaction })

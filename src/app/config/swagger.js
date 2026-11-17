@@ -89,20 +89,6 @@ const options = {
                         }
                     ]
                 },
-                DriverDeleteInput: {
-                    type: 'object',
-                    required: [
-                        'confirmation'
-                    ],
-                    properties: {
-                        confirmation: {
-                            type: 'string',
-                            enum: [
-                                'EXCLUIR'
-                            ]
-                        }
-                    }
-                },
                 DriverStatusInput: {
                     type: 'object',
                     required: [

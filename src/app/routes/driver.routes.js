@@ -435,7 +435,7 @@ Router.patch('/drivers/:id/status', AuthMiddleware, roleMiddleware('manager'), S
  * @swagger
  * '/drivers/{id}':
  *   delete:
- *     summary: Anonymize driver data; confirmation must equal EXCLUIR
+ *     summary: Anonymize driver data
  *     description: >-
  *       Only the driver's responsible manager can access it; other managers get 404.
  *     tags:
@@ -458,7 +458,7 @@ Router.patch('/drivers/:id/status', AuthMiddleware, roleMiddleware('manager'), S
  *                 data:
  *                   type: object
  *       '400':
- *         description: 'invalid_schema, confirmation_mismatch'
+ *         description: invalid_schema
  *         content:
  *           application/json:
  *             schema:
@@ -501,14 +501,8 @@ Router.patch('/drivers/:id/status', AuthMiddleware, roleMiddleware('manager'), S
  *           type: integer
  *           minimum: 1
  *           maximum: 2147483647
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/DriverDeleteInput'
  */
-Router.delete('/drivers/:id', AuthMiddleware, roleMiddleware('manager'), SchemaParserMiddleware(DriverController.deleteSchema, null, DriverController.paramsSchema), DriverController.destroy)
+Router.delete('/drivers/:id', AuthMiddleware, roleMiddleware('manager'), SchemaParserMiddleware(null, null, DriverController.paramsSchema), DriverController.destroy)
 
 /**
  * @swagger

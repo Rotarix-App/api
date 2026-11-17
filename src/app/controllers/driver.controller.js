@@ -15,7 +15,6 @@ class DriverController {
             status: z.enum(['all', 'active', 'inactive'], { error: 'Informe um status válido.' }).default('all')
         }).strict('Informe apenas os filtros de busca e status.')
         this.statusSchema = z.object({ status: z.enum(['active', 'inactive'], { error: 'Informe um status válido.' }) })
-        this.deleteSchema = z.object({ confirmation: z.string({ error: 'Digite EXCLUIR para confirmar a exclusão.' }) })
         const numericId = z.number({ error: 'Informe um identificador válido.' }).int('Informe um identificador válido.').min(1, 'Informe um identificador válido.').max(2147483647, 'Informe um identificador válido.')
         this.assignSchema = z.object({
             fleetId: numericId,
@@ -88,7 +87,7 @@ class DriverController {
      * @param {express.Response} res
      */
     async destroy(req, res) {
-        const result = await DriverService.destroy(req.params.id, req.user.id, req.body.confirmation)
+        const result = await DriverService.destroy(req.params.id, req.user.id)
         if (result.error) return utils.sendError(res, result)
         return res.status(200).json({ error: false, message: 'Dados do motorista excluídos com sucesso.', data: result })
     }

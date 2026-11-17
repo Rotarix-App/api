@@ -195,22 +195,6 @@ describe('PUT /users/@me/password', () => {
 
 describe('DELETE /users/@me', () => {
     describe('errors', () => {
-        test.each([
-            [{}, 'invalid_schema'],
-            [{ confirmation: 'excluir' }, 'confirmation_mismatch']
-        ])('Should require typing EXCLUIR (%j)', async (body, id) => {
-            const { token, user } = await createTestUser('manager')
-
-            const response = await request(global.app)
-                .delete('/users/@me')
-                .set('Authorization', `Bearer ${token}`)
-                .send(body)
-
-            expect(response.status).toBe(400)
-            expect(response.body.id).toBe(id)
-            expect((await User.findByPk(user.id)).deletedAt).toBeNull()
-        })
-
         test('Should block a driver with a trip in progress', async () => {
             const { token, user } = await createTestUser('driver')
             await startTripFor(user.id)
@@ -218,7 +202,6 @@ describe('DELETE /users/@me', () => {
             const response = await request(global.app)
                 .delete('/users/@me')
                 .set('Authorization', `Bearer ${token}`)
-                .send({ confirmation: 'EXCLUIR' })
 
             expect(response.status).toBe(409)
             expect(response.body.id).toBe('trip_in_progress')
@@ -232,7 +215,6 @@ describe('DELETE /users/@me', () => {
             const response = await request(global.app)
                 .delete('/users/@me')
                 .set('Authorization', `Bearer ${token}`)
-                .send({ confirmation: 'EXCLUIR' })
 
             expect(response.status).toBe(200)
 

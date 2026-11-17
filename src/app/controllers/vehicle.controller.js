@@ -34,14 +34,6 @@ class VehicleController {
         this.statusSchema = z.object({
             status: z.enum(['active', 'inactive'], { error: 'Informe um status válido: ativo ou inativo.' })
         })
-
-        this.deleteSchema = z.object({
-            confirmationPlate: z
-                .string({ error: 'Digite a placa para confirmar a exclusão.' })
-                .max(10, 'Digite a placa para confirmar a exclusão.')
-                .transform((value) => value.replace(/[\s-]/g, '').toUpperCase())
-                .pipe(z.string().min(1, 'Digite a placa para confirmar a exclusão.'))
-        })
     }
 
     /**
@@ -146,7 +138,7 @@ class VehicleController {
      * @param {express.Response} res
      */
     async destroy(req, res) {
-        const result = await VehicleService.destroy(req.params.id, req.user.id, req.body.confirmationPlate)
+        const result = await VehicleService.destroy(req.params.id, req.user.id)
         if (result.error) return utils.sendError(res, result)
 
         return res.status(200).json({

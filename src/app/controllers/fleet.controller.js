@@ -43,13 +43,6 @@ class FleetController {
         this.statusSchema = z.object({
             status: z.enum(['active', 'inactive'], { error: 'Informe um status válido: ativa ou inativa.' })
         })
-
-        this.deleteSchema = z.object({
-            confirmationName: z
-                .string({ error: 'Digite o nome da frota para confirmar a exclusão.' })
-                .min(1, 'Digite o nome da frota para confirmar a exclusão.')
-                .max(100, 'O nome da frota deve ter no máximo 100 caracteres.')
-        })
     }
 
     /**
@@ -138,7 +131,7 @@ class FleetController {
      * @param {express.Response} res
      */
     async destroy(req, res) {
-        const result = await FleetService.destroy(req.params.id, req.user.id, req.body.confirmationName)
+        const result = await FleetService.destroy(req.params.id, req.user.id)
         if (result.error) return utils.sendError(res, result)
 
         return res.status(200).json({
