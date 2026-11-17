@@ -31,7 +31,7 @@ Each user has exactly one role, chosen at sign-up and never changed: **manager**
 | See vehicles | ✓ | assigned ones only | RN03, RF09 |
 | Start, finish and cancel trips | — | own trips, on assigned vehicles | D20, RN03 |
 | Record expenses, refueling and maintenance | — | on assigned vehicles, with or without a trip | D18, D19, RN03 |
-| Edit and delete expenses | — | own expenses | D21 (limits: P21) |
+| Edit and delete expenses | — | own expenses, at any time | D21, D46 |
 
 A manager only accesses the fleets they created (D27), and so only their vehicles and assignments. Each driver has at most one responsible manager, and only that manager accesses them; other managers get 404 (D32). A deleted manager's fleets remain an open question (P23).
 
@@ -60,7 +60,7 @@ A manager only accesses the fleets they created (D27), and so only their vehicle
   - Moving it to another fleet removes its assignments. Moving it, changing its odometer, deactivating it and deleting it are blocked during a trip (D30, D31).
   - The manager can only raise the odometer, which records a manual reading (D31).
   - Deleting requires typing the plate. The vehicle disappears for drivers, while its trips, expenses and photos are kept.
-  - Service alerts come from odometer readings ("Revisão em 800 km", "Troca de óleo vencida há 420 km"). Where they're configured is undefined (P09).
+  - Service alerts come from odometer readings ("Revisão em 800 km", "Troca de óleo vencida há 420 km"). The manager registers them per vehicle (title, due km, optional interval); a preventive maintenance completes the due one and schedules the next (D47).
 - **Driver** (RF06, D14, D24, D32–D37).
   - Created by a manager (name, email, phone, CNH number, CNH category B/C/D/E, temporary password), who becomes their responsible manager, or through self sign-up, with no manager. A manager links a driver without a manager by exact email (`POST /drivers/link`); there is no listing of drivers without a manager, and another manager's driver answers 404 (D32).
   - Deactivating is allowed during a trip (RF06) and removes assignments; while the trip lasts, `tripStatus` stays `in_progress` so the app warns the manager. Restricted access only permits finishing/cancelling the driver's own ongoing trip (D33), then blocks all access. Idempotent reactivation restores no assignments (D36).
@@ -78,11 +78,11 @@ A manager only accesses the fleets they created (D27), and so only their vehicle
   - **Cancel:** by the driver; the trip ends without an arrival and its expenses are kept.
   - **Summary:** km, duration, cost per km and total expenses.
 - **Expense** (RF11–RF12, D19, D21, D22).
-  - Fields: category, amount, optional description and a receipt photo (whether it's required: P10). The timestamp is automatic.
-  - It links to the trip in progress, or otherwise to a vehicle (P19).
+  - Fields: category, amount, optional description and an optional receipt photo (D44); category Combustível only through a refueling (D43). The timestamp is automatic.
+  - It links to the trip in progress and its vehicle, or otherwise to the assigned vehicle the driver picks (D42).
   - The driver can edit or delete it. Deleting removes the receipt.
 - **Refueling** (D19). Liters, price per liter, computed total, odometer, gas station, odometer photo and optional invoice photo. It counts in spend as Combustível.
-- **Maintenance** (D18, D19). Type (Preventiva, Corretiva or Urgência), service, amount, workshop, odometer, odometer photo and optional invoice photo. Only drivers record it. How its cost appears in the categories is undefined (P17).
+- **Maintenance** (D18, D19). Type (Preventiva, Corretiva or Urgência), service, amount, workshop, odometer, odometer photo and optional invoice photo. Only drivers record it. Its cost counts as "Manutenção de urgência" in every total (D45). Refuelings and maintenances can't be edited or deleted (D46).
 - **Account** (RF01–RF03, D15, D23, D25).
   - Required fields: full name, unique email, password and phone. Drivers also need CNH number and category.
   - Changing the password requires the current one and a confirmation (RF03; the screen isn't designed yet, P20).
@@ -115,7 +115,7 @@ Summary only. The physical schema (tables, columns, constraints) is in `.claude/
 | Maintenance | type, service, amount, workshop, odometer with photo, invoice photo, vehicle, trip if any |
 | Photo | odometer, receipt or invoice image linked to its record, stored outside MySQL (RNF05) |
 | Odometer reading | every reading of a vehicle (manual, trip start or end, refueling, maintenance) with its photo; the source of RN07 |
-| Service reminder | a vehicle's next service by km ("Revisão", "Troca de óleo"); a proposal (P09) |
+| Service reminder | a vehicle's next service by km ("Revisão", "Troca de óleo"); registered by the manager (D47) |
 
 The data model applies these as proposals awaiting approval: one company with fleets owned by their manager (D27), and refueling and maintenance as separate tables (P17, P18).
 

@@ -28,7 +28,13 @@ Started 2026-10-18. Every entry here is either stated in the official sources, c
 | **D37** | 2026-11-16 | **A deleted driver appears in history only as "Motorista removido"**: historical joins include deleted users (paranoid: false) but expose no id, contact or CNH. Photos are kept. Storage keys never contain name, email, phone or CNH. Request logs keep no email or phone. | user | P14 (partly) |
 | **D39** | 2026-11-16 | **An inactive driver can't receive assignments**: 409 `driver_inactive`. Reactivate first, then assign. | user | — |
 | **D40** | 2026-11-16 | **Photos are uploaded separately** (`POST /photos`, multipart, stored on local disk under `UPLOAD_DIR` with an opaque UUID key) and records reference them by id (`odometerPhotoId`). Reusable by expenses, refuelings and maintenance, and lets the app retry only the upload. | user | Partly P10 (storage) |
-| **D41** | 2026-11-16 | **A trip's spend total (S27, S30, cost per km) sums its expenses and refuelings.** Maintenance stays out until P17 is answered. | user | Partly P17 |
+| **D41** | 2026-11-16 | **A trip's spend total (S27, S30, cost per km) sums its expenses and refuelings.** **Changed by D45:** maintenances count too. | user | Partly P17 |
+| **D42** | 2026-11-16 | **Outside a trip, the driver picks the vehicle** of an expense, refueling or maintenance (`vehicleId`, one of their assigned vehicles). During a trip the trip's vehicle is used and `vehicleId` is ignored. The single vehicle card of S32–S34 becomes a picker when there's more than one. | user | P19 |
+| **D43** | 2026-11-16 | **"Combustível" is recorded only as a refueling (S33)**, with odometer and photo. A plain expense (S32) accepts Pedágio, Alimentação, Borracharia and Manutenção de urgência. | user | P18 |
+| **D44** | 2026-11-16 | **The receipt photo of a plain expense is optional**, like the invoice of refueling and maintenance (D26). | user | P10 (receipt) |
+| **D45** | 2026-11-16 | **Every maintenance (preventive, corrective, urgent) counts in spend totals under the "Manutenção de urgência" category**, shown as maintenance in the breakdown. The trip total includes maintenances too. | user | P17 |
+| **D46** | 2026-11-16 | **Only the driver edits and deletes their own expenses, at any time**; the manager only views. Refuelings and maintenances can't be edited or deleted, because they record odometer readings (RN07). | user | P21 |
+| **D47** | 2026-11-16 | **Service reminders are registered by the manager per vehicle** (title, due odometer, optional interval). A preventive maintenance completes the vehicle's due reminder with the lowest due odometer and, if it has an interval, schedules the next one from the maintenance odometer. The configuration screen still has to be drawn in the Figma. | user | P09 |
 
 Rejected on 2026-11-16: a shared driver registry for all managers (proposed as D38 on 2026-11-11 without the user's confirmation). D32 applies instead.
 
@@ -123,6 +129,14 @@ The repository uses Node.js/CommonJS, Express 5, Sequelize, Zod, JWT/bcryptjs an
   - Locks: start takes the driver row, the fleet, the vehicle, then the photo (same order as the driver and vehicle services); finish/cancel take the vehicle, then the trip. The unique `active_*` columns remain the RN06 backstop.
   - The history filter is `all` (default, includes cancelled), `in_progress` or `finished` (S29). Duration of a trip in progress is the elapsed time so far; distance and cost per km are null until it's finished. The odometer-photo count covers the trip's start and end photos, as in the S30 sample.
   - The M18 confirmation is client-side; the API has no field for it.
+
+- **Choices made while building the remaining driver and manager endpoints** (2026-11-16, applied; review them):
+  - Driver: `GET /users/@me/vehicles` and `/users/@me/vehicles/:id` (S23–S24) with `tripStatus` `free`, `on_trip`, `unavailable` (another driver's trip, with that driver's name) or `inactive` (vehicle or fleet); the detail's recent history is the driver's own last 5 trips and 5 refuelings on that vehicle.
+  - Records: `POST /expenses`, `GET`/`PUT`/`DELETE /expenses/:id`, `POST /refuelings`, `GET /refuelings/:id`, `POST /maintenances`, `GET /maintenances/:id`, `GET /users/@me/spending?month=` (S31, month in Brasília time). The refueling total is liters × price per liter, rounded to cents. On edit, an omitted `receiptPhotoId` keeps the receipt and `null` removes it; a removed or replaced receipt is deleted. Outside a trip, a vehicle on a trip with another driver can't receive records (409 `vehicle_on_trip`).
+  - A preventive maintenance completes only a reminder already due (due odometer ≤ maintenance odometer), the one with the lowest due odometer.
+  - Reminders: `GET`/`POST /vehicles/:id/reminders`, `PUT`/`DELETE /vehicles/:id/reminders/:reminderId`, manager-only; completed reminders can't be edited (409 `reminder_completed`). `GET /vehicles/:id` now returns `serviceAlerts`.
+  - Manager: `GET /metrics` (S04–S05 and the S08 Resumo tab with `fleetId`), `GET /activity/trips`, `/activity/trips/:id`, `/activity/expenses` (all record types, `category` filter) and `/activity/maintenances` (S15–S18). Period: `days` 7, 30 (default) or 90, or `from`/`to` up to 366 days, in Brasília time. Trips count those started in the period; km and cost per km use trips finished in it, over all spend in the period. `changePercent` is null when the previous period had no spend. Records of a deleted fleet's vehicles drop out of manager views, since those vehicles lose their fleet.
+  - `GET /photos/:id` also serves the manager who owns the vehicle of the record the photo belongs to (S18).
 
 ## Recording a new decision
 

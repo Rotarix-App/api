@@ -32,7 +32,7 @@ src/
 │   ├── database/index.js        # Sequelize connection (exported first, `connection.ready`), then models/associations.js
 │   ├── database/models/         # 11 Sequelize models, associations.js, index.js (import models from here)
 │   ├── middlewares/             # auth (JWT), role, schema (Zod), upload (multer), logger, private.auth (localhost only)
-│   └── utils/                   # index.js (error, sendError, logError), schemas.js (shared Zod fields), storage.js (photo files)
+│   └── utils/                   # index.js (error, sendError, logError), schemas.js (shared Zod fields), storage.js (photo files), records.js (record presentation and totals), period.js (Brasília-time periods)
 └── tests/                       # see testing rule
 data/db.sql                      # schema script (destructive: drops the database first)
 docs/der/                        # ERD: der.mmd (source), der.png, der.svg

@@ -21,6 +21,7 @@ The state of this checkout, last updated 2026-11-16. It doesn't cover other repo
 | 2026-11-16 | At the user's request, reviewed the merged `Motorista` delivery. Removed the committed `.env.test.local` (another developer's credentials, which broke `npm test`), restored `docker-compose.yml` and `.env.example`, and deleted the machine-specific migrations and `testing-database.md`. Restored `utils.logError` (the new version logged raw `sqlMessage`, which can contain emails). Removed requirement IDs from Swagger and test names. Decisions D32–D38 had been recorded as confirmed without the user: the user confirmed D32–D37 and D39 and rejected D38 (shared registry). Implemented D32 again: `users.manager_id` (schema, model, associations, der.mmd), every driver endpoint scoped to the responsible manager (404 otherwise), `POST /drivers/link` by exact email, release clears the manager (D35), 409 `driver_inactive` (D39), `tripStatus` stays `in_progress` after deactivation during a trip (D33). Added tests for edit validation, duplicate email, status/confirmation validation, linking (including a concurrent link) and inactive assignment. **315 passed, 10 suites** with `MYSQL_PASSWORD= npm test` on the local MySQL; Swagger parses with `failOnErrors`. |
 | 2026-11-16 | At the user's request, compared the implemented endpoints with the Figma (S01–S03, S06–S14, S19–S20, S36–S37, M01–M09, M14–M17, M19–M21). Fields, filters, counts, statuses and messages match. Fixed `DELETE /users/@me`, which now requires `confirmation: "EXCLUIR"` as M15/M17 and D23 require (400 `invalid_schema` or `confirmation_mismatch`). `User.toJSON` no longer exposes `managerId`. Recorded the prototype gaps as P24. **317 passed, 10 suites**; Swagger parses. |
 | 2026-11-16 | At the user's request, built the driver's **trips** module against the Figma (S21–S22, S25–S30, M12–M13, M18) and the **photo upload** it needs. The user decided D40 (separate upload, local disk) and D41 (trip total = expenses + refuelings). **Code:** `POST /photos` and `GET /photos/:id` (multer, type detected from the bytes, UUID keys under `UPLOAD_DIR`); `POST` and `GET /trips`, `GET /trips/current`, `GET /trips/:id` (records and S30 summary), `POST /trips/:id/photos`, `/finish` and `/cancel`, the last three open to the D33 restricted session. Start and finish lock driver, fleet, vehicle and trip rows before checking RN06/RN07 and write the odometer reading and `current_odometer` in the same transaction. Added `multer`. **Tests:** 12 photo and 41 trip integration tests, including two concurrent starts on one vehicle and a driver deactivated mid-trip. **370 passed, 12 suites** with `MYSQL_PASSWORD= npm test`; the trips suite passed two more times; Swagger parses with `failOnErrors`. |
+| 2026-11-16 | At the user's request, built every remaining endpoint after the user answered P09, P10, P17, P18, P19 and P21 (D42–D47). **Code:** the driver's vehicles (S23–S24); expenses with edit and delete, refuelings and maintenances with odometer readings and photos, and the monthly spending (S31–S35, M10–M11); service reminders and alerts (S10, S21, S23–S24, S05); manager metrics (S04–S05, S08 Resumo) and the activity feed with the trip detail and photo access (S15–S18). Trip totals now include maintenances (D45). Shared helpers: `utils/records.js`, `utils/period.js`, `repositories/record-scope.js`. **Tests:** driver vehicles, records, reminders and activity suites (47 new tests). **417 passed, 16 suites** with `MYSQL_PASSWORD= npm test`; Swagger parses (41 paths, every `$ref` resolves). Not yet exercised against production. |
 
 ## What exists
 
@@ -30,7 +31,7 @@ The state of this checkout, last updated 2026-11-16. It doesn't cover other repo
 | Files | State |
 |---|---|
 | `src/index.js`, `src/app/index.js` | Bootstrap with dotenv, Express, CORS, JSON and an HTTP server. Exports the app. The server wasn't started; the app is exercised through Supertest. |
-| `src/app/routes/`, `controllers/`, `services/`, `repositories/` | Auth/users, fleets, vehicles, drivers, trips and photos. Drivers are scoped to their responsible manager (D32); assignment writes protect fleet ownership (D27) and ongoing trips. |
+| `src/app/routes/`, `controllers/`, `services/`, `repositories/` | Auth/users, fleets, vehicles (manager and driver views), drivers, trips, photos, expenses, refuelings, maintenances, service reminders, metrics and activity. Drivers are scoped to their responsible manager (D32); assignment writes protect fleet ownership (D27) and ongoing trips. |
 | `src/app/middlewares/` | JWT/roles/Zod; opt-in restricted own-trip completion middleware (D33), private.auth. Logger records only route templates, method/status (D37). |
 | `src/app/config/swagger.js` | `/api-docs`, OpenAPI 3, bearer scheme, auth/users/fleet/vehicle/driver operations and shared schemas. `POST /drivers/link` links a driver without a manager by email. |
 | `src/app/database/`, `data/db.sql`, `docs/der/` | 11 models, the full schema and the ERD (`docs/data-model.md`). The schema runs on MySQL 8 (test setup) and awaits approval. |
@@ -39,10 +40,7 @@ The state of this checkout, last updated 2026-11-16. It doesn't cover other repo
 
 ## Missing
 
-- The fleet Resumo tab (S08, fleet-scoped metrics), which depends on trips and expenses.
-- The vehicle service alert (S10), which waits for P09. The driver's vehicle views (S23–S24) belong to the driver views.
-- The driver's vehicle list and detail (S23–S24). S25 needs it to choose the vehicle; until then the app has no endpoint listing the driver's assigned vehicles with availability.
-- Expense/refueling/maintenance endpoints (the trip detail already reads expenses and refuelings), service alerts, metrics and the activity feed, including the manager's trip view with odometer photos (S18; `GET /photos/:id` is uploader-only for now). Driver CRUD and assignment management are implemented (D32). Odometer persistence already supports vehicle management.
+- The reminder configuration screen isn't drawn in the Figma (D47); the endpoints exist.
 - Backups or object storage for photos (RNF04–RNF05); they live on the API host's disk (D40).
 - No React Native/Expo app in this checkout.
 - No evidence of redundant infrastructure, performance tests or client acceptance.
@@ -54,7 +52,7 @@ The state of this checkout, last updated 2026-11-16. It doesn't cover other repo
 | High | `data/db.sql` starts with `DROP DATABASE IF EXISTS rotarix`. Only the test setup runs it automatically, and only against `*_test`. Run by hand, it wipes `rotarix`. |
 | Low | `docs/der/der.png` and `der.svg` predate `users.manager_id`; regenerate them from `der.mmd`. |
 | Medium | Photos uploaded but never linked to a record stay on disk; there's no cleanup job. Photo files have no backup (P15). |
-| Low | `GET /trips` has no pagination; the history grows without limit. |
+| Low | `GET /trips`, `/users/@me/spending` and the `/activity/*` lists have no pagination; metrics aggregate in memory. Fine for one company, slow for years of history. |
 | Low | `POST /trips/:id/finish`, `/cancel` and `/photos` answer 404 `trip_not_found` (not 403) to managers and for trips already ended, because `forTripAction` only lets the driver of the trip in progress through. |
 | Open | A deleted manager's drivers keep pointing at that manager, so no one can manage them (P23). |
 | High | `private.auth.middleware.js` checks only for a localhost IP, so behind a reverse proxy on the same host every request passes. No route uses it yet. |
@@ -81,8 +79,8 @@ This is a recommendation, not an approved schedule. The user sets the priorities
 1. P06 is resolved by D32. D33/D35 resolve the restricted-session/assignment portions of P12, now enforced by the trip routes. Answer P23, P17–P19 and the remaining self-deletion portion of P22; design remaining P20 flows and record prototype validation (P16).
 2. Approve the data model (`data-model.md`) and the auth choices listed in `decisions.md`.
 3. Integrate the implemented fleet, vehicle, driver and assignment endpoints with S06–S14/M01–M09, including their lifecycle rules and transfers by release and link (D35).
-4. ~~Build image storage, then trips~~ (done 2026-11-16). Next: the driver's vehicles (S23–S24), which S25 needs to pick a vehicle.
-5. Build expenses, refueling and maintenance (S31–S35, M10–M11; D19, D21) and service alerts (P09). Then the manager metrics and activity feed (S04–S05, S15–S18; D16).
+4. ~~Image storage, trips, driver vehicles, records, reminders, metrics and activity~~ (done 2026-11-16).
+5. Draw the reminder configuration screen in the Figma (D47) and validate the new flows with the user.
 6. Integrate the mobile app, validate the flows with the manager and drivers, and check performance, recovery and the acceptance criteria before delivery.
 
 ## Files changed for drivers and test infrastructure (2026-11-11, revised 2026-11-16)
